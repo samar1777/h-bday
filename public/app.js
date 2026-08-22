@@ -1,5 +1,6 @@
 // State
 let appState = {
+    authToken: localStorage.getItem('wa_admin_token') || null,
     status: 'disconnected',
     userInfo: null,
     pairingCode: null,
@@ -10,7 +11,17 @@ let appState = {
     todayDate: '',
 };
 
-// Elements
+// Auth Elements
+const authGate = document.getElementById('auth-gate');
+const appWrapper = document.getElementById('app-wrapper');
+const authForm = document.getElementById('auth-form');
+const adminPasswordInput = document.getElementById('admin-password-input');
+const btnTogglePwd = document.getElementById('btn-toggle-pwd');
+const authErrorMsg = document.getElementById('auth-error-msg');
+const btnLoginSubmit = document.getElementById('btn-login-submit');
+const btnAdminLogout = document.getElementById('btn-admin-logout');
+
+// Dashboard Elements
 const connectionBadge = document.getElementById('connection-badge');
 const filebaseBadge = document.getElementById('filebase-badge');
 const statPhone = document.getElementById('stat-phone');
@@ -59,6 +70,43 @@ const btnSaveSettings = document.getElementById('btn-save-settings');
 const filebaseSyncText = document.getElementById('filebase-sync-text');
 
 // ----------------------------------------------------
+// Authenticated Fetch Wrapper
+// ----------------------------------------------------
+async function authFetch(url, options = {}) {
+    options.headers = options.headers || {};
+    if (appState.authToken) {
+        options.headers['x-admin-token'] = appState.authToken;
+    }
+
+    const response = await fetch(url, options);
+
+    if (response.status === 401 && !url.includes('/api/auth/login')) {
+        // Token invalid or expired - lock dashboard
+        lockDashboard();
+        throw new Error('Unauthorized');
+    }
+
+    return response;
+}
+
+function lockDashboard() {
+    appState.authToken = null;
+    localStorage.removeItem('wa_admin_token');
+    appWrapper.classList.add('hidden');
+    authGate.classList.remove('hidden');
+    adminPasswordInput.value = '';
+    adminPasswordInput.focus();
+}
+
+function unlockDashboard(token) {
+    appState.authToken = token;
+    localStorage.setItem('wa_admin_token', token);
+    authGate.classList.add('hidden');
+    appWrapper.classList.remove('hidden');
+    initDashboard();
+}
+
+// ----------------------------------------------------
 // Toast Notification Helper
 // ----------------------------------------------------
 function showToast(message, type = 'info') {
@@ -81,6 +129,59 @@ function showToast(message, type = 'info') {
 }
 
 // ----------------------------------------------------
+// Authentication Form & Password Toggle
+// ----------------------------------------------------
+btnTogglePwd.addEventListener('click', () => {
+    if (adminPasswordInput.type === 'password') {
+        adminPasswordInput.type = 'text';
+        btnTogglePwd.innerText = '🙈';
+    } else {
+        adminPasswordInput.type = 'password';
+        btnTogglePwd.innerText = '👁️';
+    }
+});
+
+authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const password = adminPasswordInput.value.trim();
+    if (!password) return;
+
+    btnLoginSubmit.disabled = true;
+    btnLoginSubmit.querySelector('.btn-text').innerText = 'Verifying...';
+    authErrorMsg.classList.add('hidden');
+
+    try {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || 'Invalid password');
+        }
+
+        showToast('Authenticated successfully! 🚀', 'success');
+        unlockDashboard(data.token);
+    } catch (err) {
+        authErrorMsg.innerText = err.message || 'Incorrect password.';
+        authErrorMsg.classList.remove('hidden');
+    } finally {
+        btnLoginSubmit.disabled = false;
+        btnLoginSubmit.querySelector('.btn-text').innerText = 'Unlock Dashboard 🚀';
+    }
+});
+
+btnAdminLogout.addEventListener('click', async () => {
+    try {
+        await authFetch('/api/auth/logout', { method: 'POST' });
+    } catch {}
+    lockDashboard();
+    showToast('Dashboard locked.', 'info');
+});
+
+// ----------------------------------------------------
 // Tabs Navigation
 // ----------------------------------------------------
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -99,8 +200,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 // Status Polling & Updates
 // ----------------------------------------------------
 async function fetchStatus() {
+    if (!appState.authToken) return;
     try {
-        const res = await fetch('/api/status');
+        const res = await authFetch('/api/status');
         const data = await res.json();
         
         appState.status = data.status;
@@ -112,7 +214,7 @@ async function fetchStatus() {
 
         renderStatusUI();
     } catch (err) {
-        console.error('Error polling status:', err);
+        // Handled by authFetch
     }
 }
 
@@ -193,7 +295,7 @@ btnGetCode.addEventListener('click', async () => {
     btnGetCode.querySelector('.btn-text').innerText = 'Generating...';
 
     try {
-        const res = await fetch('/api/pair', {
+        const res = await authFetch('/api/pair', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phoneNumber: rawPhone }),
@@ -227,7 +329,7 @@ btnLogout.addEventListener('click', async () => {
     if (!confirm('Are you sure you want to log out? This will clear session keys from Filebase S3.')) return;
 
     try {
-        const res = await fetch('/api/logout', { method: 'POST' });
+        const res = await authFetch('/api/logout', { method: 'POST' });
         const data = await res.json();
         showToast(data.message || 'Logged out successfully', 'info');
         codeResultContainer.classList.add('hidden');
@@ -242,8 +344,9 @@ btnLogout.addEventListener('click', async () => {
 // Groups Management
 // ----------------------------------------------------
 async function loadGroups() {
+    if (!appState.authToken) return;
     try {
-        const res = await fetch('/api/groups');
+        const res = await authFetch('/api/groups');
         const data = await res.json();
         appState.groups = data.groups || [];
 
@@ -292,7 +395,7 @@ btnSaveGroup.addEventListener('click', async () => {
     if (matched) groupName = matched.subject;
 
     try {
-        const res = await fetch('/api/groups/target', {
+        const res = await authFetch('/api/groups/target', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ groupId, groupName }),
@@ -318,7 +421,7 @@ btnTestGroup.addEventListener('click', async () => {
     btnTestGroup.innerText = 'Sending...';
 
     try {
-        const res = await fetch('/api/test-send', {
+        const res = await authFetch('/api/test-send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({}),
@@ -339,8 +442,9 @@ btnTestGroup.addEventListener('click', async () => {
 // Birthdays Database & Table
 // ----------------------------------------------------
 async function loadBirthdays() {
+    if (!appState.authToken) return;
     try {
-        const res = await fetch('/api/birthdays');
+        const res = await authFetch('/api/birthdays');
         const data = await res.json();
         appState.birthdays = data.birthdays || [];
         statCount.innerText = appState.birthdays.length;
@@ -360,7 +464,6 @@ function calculateDaysUntil(dobStr) {
     const currentYear = now.getFullYear();
     let target = new Date(currentYear, month - 1, day);
 
-    // Reset time components for accurate day comparison
     now.setHours(0, 0, 0, 0);
     target.setHours(0, 0, 0, 0);
 
@@ -385,7 +488,6 @@ function renderBirthdaysTable() {
         return;
     }
 
-    // Sort by nearest upcoming birthday
     const sorted = [...appState.birthdays].sort((a, b) => {
         return calculateDaysUntil(a.dob).days - calculateDaysUntil(b.dob).days;
     });
@@ -466,13 +568,13 @@ birthdayForm.addEventListener('submit', async (e) => {
     try {
         let res;
         if (id) {
-            res = await fetch(`/api/birthdays/${id}`, {
+            res = await authFetch(`/api/birthdays/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
         } else {
-            res = await fetch('/api/birthdays', {
+            res = await authFetch('/api/birthdays', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
@@ -493,7 +595,7 @@ birthdayForm.addEventListener('submit', async (e) => {
 async function deleteBirthday(id) {
     if (!confirm('Are you sure you want to delete this birthday?')) return;
     try {
-        const res = await fetch(`/api/birthdays/${id}`, { method: 'DELETE' });
+        const res = await authFetch(`/api/birthdays/${id}`, { method: 'DELETE' });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
 
@@ -507,7 +609,7 @@ async function deleteBirthday(id) {
 async function triggerSingleTest(id) {
     try {
         showToast('Sending wish into target group...', 'info');
-        const res = await fetch('/api/test-send', {
+        const res = await authFetch('/api/test-send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ birthdayId: id }),
@@ -524,7 +626,7 @@ async function triggerSingleTest(id) {
 btnCheckToday.addEventListener('click', async () => {
     try {
         btnCheckToday.disabled = true;
-        const res = await fetch('/api/check-today', { method: 'POST' });
+        const res = await authFetch('/api/check-today', { method: 'POST' });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
 
@@ -552,7 +654,7 @@ btnSaveSettings.addEventListener('click', async () => {
     };
 
     try {
-        const res = await fetch('/api/config', {
+        const res = await authFetch('/api/config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
@@ -568,7 +670,6 @@ btnSaveSettings.addEventListener('click', async () => {
     }
 });
 
-// Populate settings when config loads
 function populateSettingsUI() {
     const { config } = appState;
     if (!config) return;
@@ -579,16 +680,36 @@ function populateSettingsUI() {
 }
 
 // ----------------------------------------------------
-// Initial Bootstrap
+// Bootstrap & Verification
 // ----------------------------------------------------
-async function init() {
+async function initDashboard() {
     await fetchStatus();
     populateSettingsUI();
     await loadBirthdays();
     await loadGroups();
+}
 
-    // Poll status every 4 seconds
-    setInterval(fetchStatus, 4000);
+async function verifyAuthAndStart() {
+    if (!appState.authToken) {
+        lockDashboard();
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/auth/verify', {
+            headers: { 'x-admin-token': appState.authToken }
+        });
+        if (res.ok) {
+            authGate.classList.add('hidden');
+            appWrapper.classList.remove('hidden');
+            await initDashboard();
+            setInterval(fetchStatus, 4000);
+        } else {
+            lockDashboard();
+        }
+    } catch {
+        lockDashboard();
+    }
 }
 
 // Expose globals for inline HTML handlers
@@ -596,4 +717,4 @@ window.openEditModal = openEditModal;
 window.deleteBirthday = deleteBirthday;
 window.triggerSingleTest = triggerSingleTest;
 
-window.addEventListener('DOMContentLoaded', init);
+window.addEventListener('DOMContentLoaded', verifyAuthAndStart);

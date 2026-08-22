@@ -9,6 +9,8 @@ services:
     envVars:
       - key: PORT
         value: 3000
+      - key: ADMIN_PASSWORD
+        generateValue: true
       - key: FILEBASE_KEY
         value: 932005A6899C53076C06
       - key: FILEBASE_SECRET

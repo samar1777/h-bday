@@ -11,7 +11,35 @@
 </head>
 <body>
     <div class="app-background"></div>
-    <div class="app-container">
+
+    <!-- Security Gate / Login Screen -->
+    <div id="auth-gate" class="auth-gate-overlay">
+        <div class="auth-card">
+            <div class="auth-icon-wrapper">
+                <span class="auth-lock-icon">🔒</span>
+            </div>
+            <h2>Admin Authentication</h2>
+            <p class="auth-subtitle">Enter your admin password to access the WhatsApp Bot dashboard.</p>
+            
+            <form id="auth-form" class="auth-form">
+                <div class="form-group">
+                    <label for="admin-password-input">Admin Password</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="admin-password-input" class="form-control" placeholder="Enter password..." required autofocus>
+                        <button type="button" id="btn-toggle-pwd" class="btn-pwd-eye" title="Toggle visibility">👁️</button>
+                    </div>
+                    <small id="auth-error-msg" class="auth-error-text hidden"></small>
+                </div>
+                <button type="submit" id="btn-login-submit" class="btn btn-primary btn-block">
+                    <span class="btn-text">Unlock Dashboard 🚀</span>
+                    <span class="btn-spinner hidden"></span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Container -->
+    <div id="app-wrapper" class="app-container hidden">
         
         <!-- Navigation / Header -->
         <header class="app-header">
@@ -32,6 +60,9 @@
                     <span class="badge-dot"></span>
                     <span class="badge-text">Disconnected</span>
                 </div>
+                <button id="btn-admin-logout" class="btn btn-sm btn-ghost" title="Lock Dashboard">
+                    🔒 Lock
+                </button>
             </div>
         </header>
 
