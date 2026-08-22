@@ -55,19 +55,23 @@ export async function downloadSessionFromS3(localDir) {
         for (const item of listResult.Contents) {
             if (!item.Key || item.Key.endsWith('/')) continue;
             
-            const relativeName = item.Key.replace(SESSION_PREFIX, '');
-            const localFilePath = path.join(localDir, relativeName);
+            try {
+                const relativeName = item.Key.replace(SESSION_PREFIX, '');
+                const localFilePath = path.join(localDir, relativeName);
 
-            const getCommand = new GetObjectCommand({
-                Bucket: FILEBASE_BUCKET,
-                Key: item.Key,
-            });
+                const getCommand = new GetObjectCommand({
+                    Bucket: FILEBASE_BUCKET,
+                    Key: item.Key,
+                });
 
-            const response = await s3Client.send(getCommand);
-            const bodyBytes = await response.Body.transformToByteArray();
-            
-            fs.writeFileSync(localFilePath, Buffer.from(bodyBytes));
-            downloadedCount++;
+                const response = await s3Client.send(getCommand);
+                const bodyBytes = await response.Body.transformToByteArray();
+                
+                fs.writeFileSync(localFilePath, Buffer.from(bodyBytes));
+                downloadedCount++;
+            } catch (err) {
+                console.warn(`[Filebase] ⚠️ Skipping file ${item.Key}:`, err.message);
+            }
         }
 
         console.log(`[Filebase] ✓ Restored ${downloadedCount} session file(s) from Filebase S3.`);
