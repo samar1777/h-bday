@@ -120,7 +120,7 @@ export class WhatsAppBot {
                 connectTimeoutMs: 60000,
                 defaultQueryTimeoutMs: 60000,
                 keepAliveIntervalMs: 25000,
-                markOnlineOnConnect: true,
+                markOnlineOnConnect: false,
             });
 
             // Handle credential saves & S3 sync
@@ -351,9 +351,16 @@ export class WhatsAppBot {
             msgPayload.mentions = mentions;
         }
 
-        const response = await this.sock.sendMessage(groupId, msgPayload);
-        console.log(`[WhatsApp] ✓ Message successfully sent to group ${groupId}`);
-        return response;
+        try {
+            const response = await this.sock.sendMessage(groupId, msgPayload);
+            console.log(`[WhatsApp] ✓ Message successfully sent to group ${groupId}`);
+            return response;
+        } catch (err) {
+            if (err.message?.includes('item-not-found')) {
+                throw new Error(`Target WhatsApp group (${groupId}) was not found. Please open the 'Target Group' tab, choose an active group from the dropdown, and click 'Save Target Group'.`);
+            }
+            throw err;
+        }
     }
 
     /**
