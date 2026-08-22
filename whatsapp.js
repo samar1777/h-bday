@@ -108,6 +108,8 @@ export class WhatsAppBot {
                 generateHighQualityLinkPreview: true,
                 connectTimeoutMs: 60000,
                 defaultQueryTimeoutMs: 60000,
+                keepAliveIntervalMs: 25000,
+                markOnlineOnConnect: true,
             });
 
             // Handle credential saves & S3 sync
@@ -290,32 +292,66 @@ export class WhatsAppBot {
     }
 
     /**
-     * Formats and dispatches a birthday greeting into a target WhatsApp group
+     * Formats and dispatches a birthday greeting into a target WhatsApp group.
+     * Always tags the recipient number and preserves custom messages as entered.
      */
     async sendBirthdayWishToGroup(groupId, birthdayPerson) {
         const { name, phone, customWish } = birthdayPerson;
         
-        let mentionJid = null;
-        let mentionText = name;
+        const mentions = [];
+        let tagText = '';
 
         if (phone) {
             const cleanPhone = phone.replace(/\D/g, '');
-            if (cleanPhone.length >= 10) {
-                mentionJid = `${cleanPhone}@s.whatsapp.net`;
-                mentionText = `@${cleanPhone}`;
+            if (cleanPhone.length >= 8) {
+                const jid = `${cleanPhone}@s.whatsapp.net`;
+                mentions.push(jid);
+                tagText = `@${cleanPhone}`;
             }
         }
 
-        const defaultWish = (
-            `🎉🎂 *HAPPY BIRTHDAY ${mentionText.toUpperCase()}!* 🎂🎉\n\n` +
-            `Wishing you a fabulous day filled with love, laughter, and endless happiness! 🥳✨\n` +
-            `May this upcoming year bring you massive success and great health! 🥂🎈\n\n` +
-            `_Let's all celebrate ${mentionText}'s special day!_ 🎊🍰`
-        );
+        let messageText = '';
 
-        const messageText = customWish ? customWish.replace(/\{name\}/g, mentionText) : defaultWish;
-        const mentions = mentionJid ? [mentionJid] : [];
+        if (customWish && customWish.trim().length > 0) {
+            let msg = customWish.trim();
 
+            // Replace {name} or {tag} placeholder if present
+            if (msg.includes('{name}')) {
+                msg = msg.replace(/\{name\}/g, tagText || name || 'Friend');
+            }
+            if (msg.includes('{tag}')) {
+                msg = msg.replace(/\{tag\}/g, tagText || name || 'Friend');
+            }
+
+            // Always tag the number if provided and not already in the custom message
+            if (tagText && !msg.includes(tagText)) {
+                messageText = `${tagText} ${msg}`;
+            } else {
+                messageText = msg;
+            }
+        } else {
+            // Default greeting template
+            const headerTag = tagText || (name ? name.toUpperCase() : 'FRIEND');
+            messageText = (
+                `🎉🎂 *HAPPY BIRTHDAY ${headerTag}!* 🎂🎉\n\n` +
+                `Wishing you a fantastic day filled with happiness, success, and joy! 🥳✨\n` +
+                `May all your dreams come true this year! 🥂🎈\n\n` +
+                `_Let's all celebrate ${headerTag}'s special day!_ 🎊🍰`
+            );
+        }
+
+        // Detect and register any other @123456789 mentions present in the message
+        const extraMentions = messageText.match(/@(\d{8,16})/g);
+        if (extraMentions) {
+            extraMentions.forEach(m => {
+                const jid = `${m.replace('@', '')}@s.whatsapp.net`;
+                if (!mentions.includes(jid)) {
+                    mentions.push(jid);
+                }
+            });
+        }
+
+        console.log(`[WhatsApp] Sending birthday message to group ${groupId} with mentions:`, mentions);
         return await this.sendGroupMessage(groupId, messageText, mentions);
     }
 

@@ -171,11 +171,20 @@ export class BirthdayScheduler {
     }
 
     async triggerTestWish(birthdayId) {
-        const person = this.birthdays.find((b) => b.id === birthdayId) || {
-            name: 'Test Celebrant',
-            phone: '',
-            customWish: '🎉🎂 *TEST BIRTHDAY MESSAGE!* 🎂🎉\n\nTesting WhatsApp Group Birthday automation successfully! 🚀🥂',
-        };
+        let person = this.birthdays.find((b) => b.id === birthdayId);
+
+        if (!person) {
+            // If testing generally, pick first configured birthday or default test person
+            if (this.birthdays.length > 0) {
+                person = this.birthdays[0];
+            } else {
+                person = {
+                    name: 'Test Celebrant',
+                    phone: '',
+                    customWish: '🎉🎂 *TEST BIRTHDAY MESSAGE!* 🎂🎉\n\nTesting WhatsApp Group Birthday automation successfully! 🚀🥂',
+                };
+            }
+        }
 
         if (!this.config.targetGroupId) {
             throw new Error('Target group is not selected. Please choose a target WhatsApp group first.');
