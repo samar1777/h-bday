@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Group Birthday Bot | Render & Filebase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-background"></div>
+    <div class="app-container">
+        
+        <!-- Navigation / Header -->
+        <header class="app-header">
+            <div class="brand">
+                <div class="brand-icon">🎂</div>
+                <div class="brand-text">
+                    <h1>WA Birthday Bot</h1>
+                    <p class="subtitle">Automated Group Birthday Wishes • Headless & Cloud-Ready</p>
+                </div>
+            </div>
+            
+            <div class="header-badges">
+                <div id="filebase-badge" class="badge badge-filebase">
+                    <span class="badge-dot"></span>
+                    <span class="badge-text">Filebase: Checking...</span>
+                </div>
+                <div id="connection-badge" class="badge badge-disconnected">
+                    <span class="badge-dot"></span>
+                    <span class="badge-text">Disconnected</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Quick Stats Strip -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">📱</div>
+                <div class="stat-info">
+                    <span class="stat-label">Logged In Number</span>
+                    <span id="stat-phone" class="stat-value">Not Connected</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-info">
+                    <span class="stat-label">Target Group</span>
+                    <span id="stat-group" class="stat-value">Not Selected</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⏰</div>
+                <div class="stat-info">
+                    <span class="stat-label">Scheduled Time</span>
+                    <span id="stat-time" class="stat-value">00:00 (Midnight)</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎉</div>
+                <div class="stat-info">
+                    <span class="stat-label">Birthdays Tracked</span>
+                    <span id="stat-count" class="stat-value">0</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Content with Tabs -->
+        <main class="main-card">
+            <nav class="tabs-nav">
+                <button class="tab-btn active" data-tab="pair-tab">
+                    <span class="tab-icon">🔑</span> Link WhatsApp
+                </button>
+                <button class="tab-btn" data-tab="group-tab">
+                    <span class="tab-icon">👥</span> Target Group
+                </button>
+                <button class="tab-btn" data-tab="birthdays-tab">
+                    <span class="tab-icon">🎂</span> Birthday List
+                </button>
+                <button class="tab-btn" data-tab="settings-tab">
+                    <span class="tab-icon">⚙️</span> Settings & Cloud
+                </button>
+            </nav>
+
+            <!-- Tab 1: Pairing & Connection -->
+            <section id="pair-tab" class="tab-pane active">
+                <div class="pane-header">
+                    <h2>Link WhatsApp via Pairing Code</h2>
+                    <p>No QR scanning needed. Simply enter your WhatsApp phone number to generate an official 8-digit pairing code.</p>
+                </div>
+
+                <div id="connected-view" class="connected-banner hidden">
+                    <div class="success-icon">✓</div>
+                    <div class="connected-details">
+                        <h3>WhatsApp is Connected & Active!</h3>
+                        <p id="connected-user-text">Logged in as: +919876543210</p>
+                        <p class="small-text">Session keys are backed up to Filebase S3 bucket <code>sessiontoken</code>. Your bot will stay logged in even after Render restarts.</p>
+                    </div>
+                    <button id="btn-logout" class="btn btn-danger">Log Out & Clear Session</button>
+                </div>
+
+                <div id="pairing-view" class="pairing-box">
+                    <div class="form-group">
+                        <label for="phone-input">Your WhatsApp Phone Number (with Country Code)</label>
+                        <div class="input-with-button">
+                            <input type="text" id="phone-input" placeholder="e.g. 919876543210 or +91 98765 43210" autocomplete="tel">
+                            <button id="btn-get-code" class="btn btn-primary">
+                                <span class="btn-text">Get Pairing Code</span>
+                                <span class="btn-spinner hidden"></span>
+                            </button>
+                        </div>
+                        <small class="form-hint">Do not include symbols like '-' or spaces. Example for India: <code>919876543210</code>, for US: <code>14155552671</code></small>
+                    </div>
+
+                    <div id="code-result-container" class="code-result-container hidden">
+                        <div class="code-display-card">
+                            <span class="code-label">Your WhatsApp Pairing Code</span>
+                            <div class="code-value-wrapper">
+                                <span id="pairing-code-display" class="code-value">---- ----</span>
+                                <button id="btn-copy-code" class="btn btn-sm btn-ghost" title="Copy Code">📋 Copy</button>
+                            </div>
+                            <p class="code-expires">Code is valid for 2 minutes</p>
+                        </div>
+
+                        <div class="instructions-steps">
+                            <h4>How to enter this code on your phone:</h4>
+                            <ol>
+                                <li>Open <strong>WhatsApp</strong> on your phone.</li>
+                                <li>Tap <strong>Settings</strong> (iOS) or <strong>⋮ Menu</strong> (Android) &gt; <strong>Linked Devices</strong>.</li>
+                                <li>Tap <strong>Link a Device</strong>.</li>
+                                <li>Tap <strong>"Link with phone number instead"</strong> at the bottom of the screen.</li>
+                                <li>Enter the 8-character code shown above. Done! 🎉</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab 2: Target WhatsApp Group -->
+            <section id="group-tab" class="tab-pane">
+                <div class="pane-header">
+                    <h2>Target WhatsApp Group</h2>
+                    <p>Select which WhatsApp group the bot should send automated birthday wishes to.</p>
+                </div>
+
+                <div class="group-selection-card">
+                    <div class="form-group">
+                        <div class="flex-between">
+                            <label for="group-select">Choose Group</label>
+                            <button id="btn-refresh-groups" class="btn btn-sm btn-ghost">🔄 Refresh Groups</button>
+                        </div>
+                        <select id="group-select" class="form-control">
+                            <option value="">-- Connect WhatsApp First to Load Groups --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="manual-group-id">Or Enter Group JID Manually</label>
+                        <input type="text" id="manual-group-id" class="form-control" placeholder="e.g. 120363028372837@g.us">
+                    </div>
+
+                    <div class="form-actions">
+                        <button id="btn-save-group" class="btn btn-primary">Save Target Group</button>
+                        <button id="btn-test-group" class="btn btn-accent">🚀 Send Test Wish to Group</button>
+                    </div>
+                </div>
+
+                <div class="current-target-info">
+                    <h4>Current Group Configuration:</h4>
+                    <p><strong>Name:</strong> <span id="current-group-name">Not Selected</span></p>
+                    <p><strong>Group JID:</strong> <code id="current-group-id">None</code></p>
+                </div>
+            </section>
+
+            <!-- Tab 3: Birthday List & Manager -->
+            <section id="birthdays-tab" class="tab-pane">
+                <div class="pane-header flex-between">
+                    <div>
+                        <h2>Birthday Celebrations</h2>
+                        <p>Manage contacts, dates, and custom personalized birthday wishes.</p>
+                    </div>
+                    <div class="actions-group">
+                        <button id="btn-check-today" class="btn btn-ghost">⚡ Check Today's Birthdays</button>
+                        <button id="btn-open-add-modal" class="btn btn-primary">+ Add Birthday</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="birthdays-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Date of Birth</th>
+                                <th>WhatsApp Tag</th>
+                                <th>Status / Countdown</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="birthdays-tbody">
+                            <tr>
+                                <td colspan="5" class="text-center py-4">Loading birthdays...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Tab 4: Settings & Cloud Sync -->
+            <section id="settings-tab" class="tab-pane">
+                <div class="pane-header">
+                    <h2>Bot Settings & Filebase Persistence</h2>
+                    <p>Configure automated scheduler parameters and verify persistent storage.</p>
+                </div>
+
+                <div class="settings-grid">
+                    <div class="card-inner">
+                        <h3>⏰ Automated Schedule</h3>
+                        <div class="form-group">
+                            <label>Schedule Time (24-Hour Format)</label>
+                            <div class="time-inputs">
+                                <input type="number" id="sched-hour" min="0" max="23" value="0" class="form-control" placeholder="Hour (0-23)">
+                                <span>:</span>
+                                <input type="number" id="sched-minute" min="0" max="59" value="0" class="form-control" placeholder="Minute (0-59)">
+                            </div>
+                            <small class="form-hint">Default is 00:00 (Midnight 12 AM)</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="sched-tz">Timezone</label>
+                            <select id="sched-tz" class="form-control">
+                                <option value="Asia/Kolkata">Asia/Kolkata (IST - India)</option>
+                                <option value="UTC">UTC (Coordinated Universal Time)</option>
+                                <option value="America/New_York">America/New_York (EST / EDT)</option>
+                                <option value="America/Los_Angeles">America/Los_Angeles (PST / PDT)</option>
+                                <option value="America/Chicago">America/Chicago (CST / CDT)</option>
+                                <option value="Europe/London">Europe/London (GMT / BST)</option>
+                                <option value="Asia/Dubai">Asia/Dubai (GST)</option>
+                                <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="sched-enabled" checked>
+                            <label for="sched-enabled">Enable Automated Daily Birthday Trigger</label>
+                        </div>
+
+                        <button id="btn-save-settings" class="btn btn-primary">Save Settings</button>
+                    </div>
+
+                    <div class="card-inner">
+                        <h3>☁️ Filebase S3 Cloud Persistence</h3>
+                        <div class="info-list">
+                            <div class="info-item">
+                                <span class="info-label">Endpoint:</span>
+                                <span class="info-val"><code>https://s3.filebase.io</code></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Bucket:</span>
+                                <span class="info-val"><code>sessiontoken</code></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Session Sync:</span>
+                                <span id="filebase-sync-text" class="info-val font-semibold text-success">Active</span>
+                            </div>
+                        </div>
+                        <p class="small-text mt-3">
+                            ✅ Auth tokens and birthday records automatically sync to Filebase S3. When Render restarts or redeploys, your login state is restored automatically.
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Add/Edit Birthday Modal -->
+    <div id="birthday-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-title">Add Birthday</h3>
+                <button id="btn-close-modal" class="btn-close">&times;</button>
+            </div>
+            <form id="birthday-form">
+                <input type="hidden" id="edit-bday-id">
+                
+                <div class="form-group">
+                    <label for="bday-name">Person Name *</label>
+                    <input type="text" id="bday-name" class="form-control" placeholder="e.g. Alex" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="bday-dob">Date of Birth (Month & Day) *</label>
+                        <input type="text" id="bday-dob" class="form-control" placeholder="MM-DD (e.g. 08-22)" required>
+                        <small class="form-hint">Format: <code>MM-DD</code> or <code>YYYY-MM-DD</code></small>
+                    </div>
+                    <div class="form-group">
+                        <label for="bday-phone">WhatsApp Number for Tagging</label>
+                        <input type="text" id="bday-phone" class="form-control" placeholder="e.g. +919876543210">
+                        <small class="form-hint">Optional. Tags person with @ in group</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="bday-custom-wish">Custom Birthday Message</label>
+                    <textarea id="bday-custom-wish" class="form-control" rows="3" placeholder="Leave empty for default greeting. Use {name} as placeholder."></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" id="btn-cancel-modal" class="btn btn-ghost">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Birthday</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

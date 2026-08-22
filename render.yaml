@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: whatsapp-bday-bot
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: FILEBASE_KEY
+        value: 932005A6899C53076C06
+      - key: FILEBASE_SECRET
+        value: D8qzIFd65tWLVn8F9M8gXWMqQYrjtUc4ff80FOsh
+      - key: FILEBASE_BUCKET
+        value: sessiontoken
+      - key: FILEBASE_ENDPOINT
+        value: https://s3.filebase.io
+      - key: FILEBASE_REGION
+        value: us-east-1
