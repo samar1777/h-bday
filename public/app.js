@@ -61,6 +61,18 @@ const bdayName = document.getElementById('bday-name');
 const bdayDob = document.getElementById('bday-dob');
 const bdayPhone = document.getElementById('bday-phone');
 const bdayCustomWish = document.getElementById('bday-custom-wish');
+const bdayImageData = document.getElementById('bday-image-data');
+const bdayImageFile = document.getElementById('bday-image-file');
+const imageDropzone = document.getElementById('image-dropzone');
+const dropzoneEmpty = document.getElementById('dropzone-empty');
+const dropzonePreview = document.getElementById('dropzone-preview');
+const imagePreviewImg = document.getElementById('image-preview-img');
+const btnRemovePhoto = document.getElementById('btn-remove-photo');
+
+const photoLightboxModal = document.getElementById('photo-lightbox-modal');
+const lightboxTitle = document.getElementById('lightbox-title');
+const lightboxImg = document.getElementById('lightbox-img');
+const btnCloseLightbox = document.getElementById('btn-close-lightbox');
 
 const schedHour = document.getElementById('sched-hour');
 const schedMinute = document.getElementById('sched-minute');
@@ -476,11 +488,21 @@ function calculateDaysUntil(dobStr) {
     return { days: diffDays, isToday: diffDays === 0 };
 }
 
+function getInitials(name) {
+    if (!name) return '🎂';
+    const clean = name.replace(/^(Mr\.|Mrs\.|Ms\.|Dr\.|Sir)\s+/i, '').trim();
+    const parts = clean.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return (clean.slice(0, 2) || '🎂').toUpperCase();
+}
+
 function renderBirthdaysTable() {
     if (appState.birthdays.length === 0) {
         birthdaysTbody.innerHTML = `
             <tr>
-                <td colspan="5" class="text-center py-4" style="color: var(--text-dim);">
+                <td colspan="6" class="text-center py-4" style="color: var(--text-dim);">
                     No birthdays added yet. Click <strong>+ Add Birthday</strong> to get started!
                 </td>
             </tr>
@@ -501,15 +523,25 @@ function renderBirthdaysTable() {
             statusBadge = `<span class="countdown-badge bday-today">🎂 TODAY! 🎉</span>`;
         }
 
+        const photoHtml = b.image ? `
+            <div class="avatar-thumbnail" onclick="openPhotoLightbox('${escapeHtml(b.name)}', '${escapeHtml(b.image)}')" title="Click to view photo">
+                <img src="${escapeHtml(b.image)}" alt="${escapeHtml(b.name)}" class="avatar-img">
+                <span class="avatar-zoom-icon">🔍</span>
+            </div>
+        ` : `
+            <div class="avatar-placeholder" title="No photo attached">${getInitials(b.name)}</div>
+        `;
+
         return `
             <tr>
+                <td class="bday-photo-cell">${photoHtml}</td>
                 <td class="bday-name-cell">${escapeHtml(b.name)}</td>
                 <td><strong>${escapeHtml(b.dob)}</strong></td>
                 <td>${tagText}</td>
                 <td>${statusBadge}</td>
                 <td>
                     <div class="table-actions">
-                        <button class="btn btn-sm btn-ghost" onclick="triggerSingleTest('${b.id}')" title="Send Wish Now">🚀</button>
+                        <button class="btn btn-sm btn-ghost" onclick="triggerSingleTest('${b.id}')" title="Send Wish with Photo">🚀</button>
                         <button class="btn btn-sm btn-ghost" onclick="openEditModal('${b.id}')" title="Edit">✏️</button>
                         <button class="btn btn-sm btn-ghost" onclick="deleteBirthday('${b.id}')" title="Delete" style="color: var(--danger);">🗑️</button>
                     </div>
@@ -525,11 +557,151 @@ function escapeHtml(str) {
 }
 
 // ----------------------------------------------------
+// Image Upload & Clipboard Paste Handlers
+// ----------------------------------------------------
+function setPhotoPreview(urlOrData) {
+    if (urlOrData && urlOrData.trim()) {
+        bdayImageData.value = urlOrData;
+        imagePreviewImg.src = urlOrData;
+        dropzoneEmpty.classList.add('hidden');
+        dropzonePreview.classList.remove('hidden');
+    } else {
+        clearPhoto();
+    }
+}
+
+function clearPhoto() {
+    bdayImageData.value = '';
+    bdayImageFile.value = '';
+    imagePreviewImg.src = '';
+    dropzoneEmpty.classList.remove('hidden');
+    dropzonePreview.classList.add('hidden');
+}
+
+function compressImage(srcDataUrl, maxDim, quality, callback) {
+    const img = new Image();
+    img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+            if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+            } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+            }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const output = canvas.toDataURL('image/jpeg', quality);
+        callback(output);
+    };
+    img.onerror = () => callback(srcDataUrl);
+    img.src = srcDataUrl;
+}
+
+function handleImageFile(file) {
+    if (!file || !file.type.startsWith('image/')) {
+        showToast('Please select or paste a valid image file (JPG, PNG, WEBP).', 'error');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const rawDataUrl = e.target.result;
+        compressImage(rawDataUrl, 1200, 0.85, (compressedDataUrl) => {
+            setPhotoPreview(compressedDataUrl);
+            showToast('Photo attached! 📸', 'success');
+        });
+    };
+    reader.readAsDataURL(file);
+}
+
+// Dropzone Click & Change
+imageDropzone.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-remove-photo')) return;
+    bdayImageFile.click();
+});
+
+bdayImageFile.addEventListener('change', (e) => {
+    if (e.target.files && e.target.files[0]) {
+        handleImageFile(e.target.files[0]);
+    }
+});
+
+btnRemovePhoto.addEventListener('click', (e) => {
+    e.stopPropagation();
+    clearPhoto();
+    showToast('Photo removed', 'info');
+});
+
+// Drag & Drop
+imageDropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    imageDropzone.classList.add('drag-over');
+});
+
+imageDropzone.addEventListener('dragleave', () => {
+    imageDropzone.classList.remove('drag-over');
+});
+
+imageDropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    imageDropzone.classList.remove('drag-over');
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleImageFile(e.dataTransfer.files[0]);
+    }
+});
+
+// Global & Modal Clipboard Paste Handler (Ctrl+V)
+window.addEventListener('paste', (e) => {
+    if (!e.clipboardData || !e.clipboardData.items) return;
+    
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+            const blob = items[i].getAsFile();
+            if (blob) {
+                e.preventDefault();
+                // If birthday modal isn't open, open it automatically
+                if (birthdayModal.classList.contains('hidden')) {
+                    btnOpenAddModal.click();
+                }
+                handleImageFile(blob);
+                break;
+            }
+        }
+    }
+});
+
+// Lightbox Preview Handlers
+function openPhotoLightbox(name, imgSrc) {
+    if (!imgSrc) return;
+    lightboxTitle.innerText = `${name} - Photo`;
+    lightboxImg.src = imgSrc;
+    photoLightboxModal.classList.remove('hidden');
+}
+
+function closePhotoLightbox() {
+    photoLightboxModal.classList.add('hidden');
+    lightboxImg.src = '';
+}
+
+btnCloseLightbox.addEventListener('click', closePhotoLightbox);
+photoLightboxModal.addEventListener('click', (e) => {
+    if (e.target === photoLightboxModal) closePhotoLightbox();
+});
+
+// ----------------------------------------------------
 // Birthday Modal Actions
 // ----------------------------------------------------
 btnOpenAddModal.addEventListener('click', () => {
     modalTitle.innerText = 'Add Birthday';
     editBdayId.value = '';
+    clearPhoto();
     birthdayForm.reset();
     birthdayModal.classList.remove('hidden');
 });
@@ -544,6 +716,12 @@ function openEditModal(id) {
     bdayDob.value = item.dob;
     bdayPhone.value = item.phone || '';
     bdayCustomWish.value = item.customWish || '';
+    
+    if (item.image) {
+        setPhotoPreview(item.image);
+    } else {
+        clearPhoto();
+    }
 
     birthdayModal.classList.remove('hidden');
 }
@@ -555,14 +733,43 @@ function closeModal() {
 btnCloseModal.addEventListener('click', closeModal);
 btnCancelModal.addEventListener('click', closeModal);
 
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closePhotoLightbox();
+        closeModal();
+    }
+});
+
 birthdayForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const id = editBdayId.value;
+    
+    let finalImageUrl = bdayImageData.value;
+
+    // If image data is a data URI (pasted/uploaded), upload to server
+    if (finalImageUrl && finalImageUrl.startsWith('data:image/')) {
+        try {
+            showToast('Uploading photo...', 'info');
+            const upRes = await authFetch('/api/upload-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: finalImageUrl }),
+            });
+            const upData = await upRes.json();
+            if (!upRes.ok) throw new Error(upData.error || 'Photo upload failed');
+            finalImageUrl = upData.imageUrl;
+        } catch (upErr) {
+            showToast(`Photo upload failed: ${upErr.message}`, 'error');
+            return;
+        }
+    }
+
     const payload = {
         name: bdayName.value.trim(),
         dob: bdayDob.value.trim(),
         phone: bdayPhone.value.trim(),
         customWish: bdayCustomWish.value.trim(),
+        image: finalImageUrl || '',
     };
 
     try {
@@ -586,7 +793,7 @@ birthdayForm.addEventListener('submit', async (e) => {
 
         closeModal();
         await loadBirthdays();
-        showToast(id ? 'Birthday updated!' : 'Birthday added!', 'success');
+        showToast(id ? 'Birthday updated with photo! 🎉' : 'Birthday added with photo! 🎉', 'success');
     } catch (err) {
         showToast(err.message, 'error');
     }
@@ -716,5 +923,6 @@ async function verifyAuthAndStart() {
 window.openEditModal = openEditModal;
 window.deleteBirthday = deleteBirthday;
 window.triggerSingleTest = triggerSingleTest;
+window.openPhotoLightbox = openPhotoLightbox;
 
 window.addEventListener('DOMContentLoaded', verifyAuthAndStart);

@@ -1,11 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { waBot } from './whatsapp.js';
 import { scheduler } from './scheduler.js';
+import { uploadImageToS3 } from './filebase.js';
 
 dotenv.config();
 
@@ -20,7 +22,8 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const activeTokens = new Set();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ----------------------------------------------------
@@ -152,6 +155,57 @@ app.post('/api/groups/target', requireAuth, async (req, res) => {
 });
 
 // ----------------------------------------------------
+// Image Upload API (Protected)
+// ----------------------------------------------------
+app.post('/api/upload-image', requireAuth, async (req, res) => {
+    try {
+        const { image } = req.body;
+        if (!image) {
+            return res.status(400).json({ error: 'Image data is required.' });
+        }
+
+        let buffer;
+        let mimeType = 'image/jpeg';
+        let ext = 'jpg';
+
+        if (image.startsWith('data:')) {
+            const matches = image.match(/^data:([A-Za-z0-9\/\+\.\-]+);base64,(.+)$/);
+            if (!matches || matches.length !== 3) {
+                return res.status(400).json({ error: 'Invalid image data URI.' });
+            }
+            mimeType = matches[1];
+            buffer = Buffer.from(matches[2], 'base64');
+            if (mimeType.includes('png')) ext = 'png';
+            else if (mimeType.includes('webp')) ext = 'webp';
+            else if (mimeType.includes('gif')) ext = 'gif';
+            else if (mimeType.includes('jpeg') || mimeType.includes('jpg')) ext = 'jpg';
+        } else {
+            buffer = Buffer.from(image, 'base64');
+        }
+
+        const safeName = `bday_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.${ext}`;
+        const uploadsDir = path.join(__dirname, 'public', 'uploads');
+        if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+
+        const localPath = path.join(uploadsDir, safeName);
+        fs.writeFileSync(localPath, buffer);
+
+        // Upload to Filebase S3 for cloud persistence
+        uploadImageToS3(safeName, buffer, mimeType).catch(err => {
+            console.warn('[Server] ⚠️ Background S3 photo sync error:', err.message);
+        });
+
+        const imageUrl = `/uploads/${safeName}`;
+        res.json({ success: true, imageUrl, filename: safeName });
+    } catch (error) {
+        console.error('[Server] Error uploading image:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ----------------------------------------------------
 // Birthdays Database API (Protected)
 // ----------------------------------------------------
 app.get('/api/birthdays', requireAuth, (req, res) => {
@@ -160,11 +214,11 @@ app.get('/api/birthdays', requireAuth, (req, res) => {
 
 app.post('/api/birthdays', requireAuth, async (req, res) => {
     try {
-        const { name, phone, dob, customWish } = req.body;
+        const { name, phone, dob, customWish, image } = req.body;
         if (!name || !dob) {
             return res.status(400).json({ error: 'Name and Date of Birth (dob) are required.' });
         }
-        const newEntry = await scheduler.addBirthday({ name, phone, dob, customWish });
+        const newEntry = await scheduler.addBirthday({ name, phone, dob, customWish, image });
         res.status(201).json({ success: true, birthday: newEntry });
     } catch (error) {
         res.status(500).json({ error: error.message });

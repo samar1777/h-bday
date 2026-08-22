@@ -29,6 +29,7 @@ export const s3Client = new S3Client({
 
 const SESSION_PREFIX = 'session/';
 const DATA_PREFIX = 'data/';
+const IMAGES_PREFIX = 'images/';
 
 /**
  * Downloads all session auth files from Filebase S3 into the local session directory.
@@ -205,3 +206,98 @@ export async function saveJsonToS3(keyName, data, localFallbackPath = null) {
         return false;
     }
 }
+
+/**
+ * Uploads a photo to Filebase S3 under the 'images/' prefix.
+ */
+export async function uploadImageToS3(filename, buffer, contentType = 'image/jpeg') {
+    try {
+        const s3Key = `${IMAGES_PREFIX}${filename}`;
+        const putCommand = new PutObjectCommand({
+            Bucket: FILEBASE_BUCKET,
+            Key: s3Key,
+            Body: buffer,
+            ContentType: contentType,
+        });
+        await s3Client.send(putCommand);
+        console.log(`[Filebase] ✓ Photo '${filename}' uploaded to Filebase S3.`);
+        return true;
+    } catch (error) {
+        console.error(`[Filebase] ⚠️ Failed to upload image '${filename}' to S3:`, error.message);
+        return false;
+    }
+}
+
+/**
+ * Downloads all images stored in Filebase S3 into the local uploads directory.
+ */
+export async function downloadAllImagesFromS3(localUploadsDir) {
+    try {
+        if (!fs.existsSync(localUploadsDir)) {
+            fs.mkdirSync(localUploadsDir, { recursive: true });
+        }
+
+        const listCommand = new ListObjectsV2Command({
+            Bucket: FILEBASE_BUCKET,
+            Prefix: IMAGES_PREFIX,
+        });
+
+        const listResult = await s3Client.send(listCommand);
+        if (!listResult.Contents || listResult.Contents.length === 0) {
+            return 0;
+        }
+
+        let downloaded = 0;
+        for (const item of listResult.Contents) {
+            if (!item.Key || item.Key.endsWith('/')) continue;
+            try {
+                const filename = item.Key.replace(IMAGES_PREFIX, '');
+                const localPath = path.join(localUploadsDir, filename);
+
+                // If already present locally and non-empty, skip
+                if (fs.existsSync(localPath) && fs.statSync(localPath).size > 0) {
+                    continue;
+                }
+
+                const getCommand = new GetObjectCommand({
+                    Bucket: FILEBASE_BUCKET,
+                    Key: item.Key,
+                });
+
+                const response = await s3Client.send(getCommand);
+                const bodyBytes = await response.Body.transformToByteArray();
+                fs.writeFileSync(localPath, Buffer.from(bodyBytes));
+                downloaded++;
+            } catch (err) {
+                console.warn(`[Filebase] ⚠️ Failed to download image ${item.Key}:`, err.message);
+            }
+        }
+
+        if (downloaded > 0) {
+            console.log(`[Filebase] ✓ Restored ${downloaded} photo(s) from Filebase S3.`);
+        }
+        return downloaded;
+    } catch (error) {
+        console.error('[Filebase] ⚠️ Error syncing images from S3:', error.message);
+        return 0;
+    }
+}
+
+/**
+ * Deletes an image from Filebase S3.
+ */
+export async function deleteImageFromS3(filename) {
+    try {
+        const s3Key = `${IMAGES_PREFIX}${filename}`;
+        await s3Client.send(new DeleteObjectCommand({
+            Bucket: FILEBASE_BUCKET,
+            Key: s3Key,
+        }));
+        console.log(`[Filebase] ✓ Deleted image '${filename}' from Filebase S3.`);
+        return true;
+    } catch (error) {
+        console.error(`[Filebase] ⚠️ Error deleting image '${filename}' from S3:`, error.message);
+        return false;
+    }
+}
+

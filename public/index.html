@@ -222,6 +222,7 @@
                     <table class="birthdays-table">
                         <thead>
                             <tr>
+                                <th style="width: 60px;">Photo</th>
                                 <th>Name</th>
                                 <th>Date of Birth</th>
                                 <th>WhatsApp Tag</th>
@@ -231,7 +232,7 @@
                         </thead>
                         <tbody id="birthdays-tbody">
                             <tr>
-                                <td colspan="5" class="text-center py-4">Loading birthdays...</td>
+                                <td colspan="6" class="text-center py-4">Loading birthdays...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -314,7 +315,34 @@
             </div>
             <form id="birthday-form">
                 <input type="hidden" id="edit-bday-id">
+                <input type="hidden" id="bday-image-data">
                 
+                <!-- Celebrant Photo Upload & Paste Section -->
+                <div class="form-group">
+                    <div class="flex-between" style="margin-bottom: 6px;">
+                        <label>Person Photo (Sent with WhatsApp Wish)</label>
+                        <span class="badge-paste-tip">📋 Paste with Ctrl+V anytime</span>
+                    </div>
+
+                    <div id="image-dropzone" class="image-dropzone">
+                        <input type="file" id="bday-image-file" accept="image/*" class="hidden">
+                        
+                        <div id="dropzone-empty" class="dropzone-empty">
+                            <div class="dropzone-icon">📸</div>
+                            <p class="dropzone-title">Click to upload, drag & drop, or <strong>paste image (Ctrl+V)</strong></p>
+                            <span class="dropzone-sub">Supports JPG, PNG, WEBP (Auto-compressed)</span>
+                        </div>
+
+                        <div id="dropzone-preview" class="dropzone-preview hidden">
+                            <img id="image-preview-img" src="" alt="Celebrant Photo Preview">
+                            <div class="preview-overlay">
+                                <span class="preview-badge">✓ Photo Attached</span>
+                                <button type="button" id="btn-remove-photo" class="btn btn-sm btn-danger" title="Remove Photo">🗑️ Remove</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label for="bday-name">Person Name *</label>
                     <input type="text" id="bday-name" class="form-control" placeholder="e.g. Alex" required>
@@ -343,6 +371,19 @@
                     <button type="submit" class="btn btn-primary">Save Birthday</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Photo Lightbox Modal -->
+    <div id="photo-lightbox-modal" class="modal-overlay hidden">
+        <div class="lightbox-card">
+            <div class="lightbox-header">
+                <h4 id="lightbox-title">Photo Preview</h4>
+                <button id="btn-close-lightbox" class="btn-close">&times;</button>
+            </div>
+            <div class="lightbox-body">
+                <img id="lightbox-img" src="" alt="Celebrant High-Res Photo">
+            </div>
         </div>
     </div>
 

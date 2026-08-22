@@ -267,6 +267,51 @@ export class WhatsAppBot {
     }
 
     /**
+     * Resolves an image source (data URI, local /uploads path, or URL) into a Buffer
+     */
+    async resolveImageBuffer(imageSource) {
+        if (!imageSource || typeof imageSource !== 'string') return null;
+        const trimmed = imageSource.trim();
+        if (!trimmed) return null;
+
+        try {
+            // 1. Data URL (Base64)
+            if (trimmed.startsWith('data:image/')) {
+                const parts = trimmed.split(',');
+                if (parts[1]) {
+                    return Buffer.from(parts[1], 'base64');
+                }
+            }
+
+            // 2. Relative local path e.g. /uploads/image.jpg
+            if (trimmed.startsWith('/uploads/') || trimmed.startsWith('uploads/')) {
+                const cleanPath = trimmed.startsWith('/') ? trimmed.slice(1) : trimmed;
+                const fullPath = path.resolve('./public', cleanPath);
+                if (fs.existsSync(fullPath)) {
+                    return fs.readFileSync(fullPath);
+                }
+            }
+
+            // 3. Absolute local file path
+            if (fs.existsSync(trimmed) && fs.statSync(trimmed).isFile()) {
+                return fs.readFileSync(trimmed);
+            }
+
+            // 4. Remote HTTP / HTTPS URL
+            if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+                const resp = await fetch(trimmed);
+                if (resp.ok) {
+                    const arrayBuffer = await resp.arrayBuffer();
+                    return Buffer.from(arrayBuffer);
+                }
+            }
+        } catch (err) {
+            console.warn(`[WhatsApp] ⚠️ Could not resolve image buffer for '${trimmed.slice(0, 50)}...':`, err.message);
+        }
+        return null;
+    }
+
+    /**
      * Sends a custom text message to a specific WhatsApp group
      */
     async sendGroupMessage(groupId, message, mentions = []) {
@@ -293,10 +338,11 @@ export class WhatsAppBot {
 
     /**
      * Formats and dispatches a birthday greeting into a target WhatsApp group.
+     * If an image is provided, sends the photo with the greeting as the caption.
      * Always tags the recipient number and preserves custom messages as entered.
      */
     async sendBirthdayWishToGroup(groupId, birthdayPerson) {
-        const { name, phone, customWish } = birthdayPerson;
+        const { name, phone, customWish, image } = birthdayPerson;
         
         const mentions = [];
         let tagText = '';
@@ -351,7 +397,35 @@ export class WhatsAppBot {
             });
         }
 
-        console.log(`[WhatsApp] Sending birthday message to group ${groupId} with mentions:`, mentions);
+        // If a photo/image is attached, attempt to send as media message with caption
+        if (image) {
+            const imageBuffer = await this.resolveImageBuffer(image);
+            if (imageBuffer) {
+                try {
+                    console.log(`[WhatsApp] Sending birthday photo wish for ${name} to group ${groupId} with mentions:`, mentions);
+                    if (this.status !== 'connected' || !this.sock) {
+                        throw new Error('WhatsApp is not connected. Please pair your account first.');
+                    }
+
+                    const mediaPayload = {
+                        image: imageBuffer,
+                        caption: messageText,
+                    };
+
+                    if (mentions && mentions.length > 0) {
+                        mediaPayload.mentions = mentions;
+                    }
+
+                    const mediaResponse = await this.sock.sendMessage(groupId, mediaPayload);
+                    console.log(`[WhatsApp] ✓ Photo birthday wish successfully sent to group ${groupId}`);
+                    return mediaResponse;
+                } catch (mediaError) {
+                    console.error(`[WhatsApp] ⚠️ Photo send failed (${mediaError.message}), falling back to text wish...`);
+                }
+            }
+        }
+
+        console.log(`[WhatsApp] Sending text birthday message to group ${groupId} with mentions:`, mentions);
         return await this.sendGroupMessage(groupId, messageText, mentions);
     }
 

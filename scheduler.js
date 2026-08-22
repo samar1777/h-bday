@@ -1,10 +1,12 @@
 import cron from 'node-cron';
 import path from 'path';
-import { loadJsonFromS3, saveJsonToS3 } from './filebase.js';
+import fs from 'fs';
+import { loadJsonFromS3, saveJsonToS3, downloadAllImagesFromS3 } from './filebase.js';
 import { waBot } from './whatsapp.js';
 
 const BIRTHDAYS_LOCAL_PATH = path.resolve('./birthdays.json');
 const CONFIG_LOCAL_PATH = path.resolve('./config.json');
+const UPLOADS_LOCAL_PATH = path.resolve('./public/uploads');
 
 const DEFAULT_CONFIG = {
     targetGroupId: '', // e.g. "120363xxxxxx@g.us"
@@ -22,6 +24,7 @@ const DEFAULT_BIRTHDAYS = [
         phone: '+919876543210',
         dob: '08-22', // MM-DD
         customWish: '🎉 Happy Birthday {name}! Wishing you all the happiness and joy in the world! 🎂🥂',
+        image: '',
     }
 ];
 
@@ -34,7 +37,16 @@ export class BirthdayScheduler {
     }
 
     async init() {
-        console.log('[Scheduler] Loading birthdays and configuration from Filebase S3...');
+        console.log('[Scheduler] Loading birthdays, configuration and photos from Filebase S3...');
+        
+        // Ensure local public/uploads directory exists
+        if (!fs.existsSync(UPLOADS_LOCAL_PATH)) {
+            fs.mkdirSync(UPLOADS_LOCAL_PATH, { recursive: true });
+        }
+
+        // Restore any uploaded celebrant photos from Filebase S3
+        await downloadAllImagesFromS3(UPLOADS_LOCAL_PATH);
+
         this.birthdays = await loadJsonFromS3('birthdays.json', BIRTHDAYS_LOCAL_PATH, DEFAULT_BIRTHDAYS);
         this.config = await loadJsonFromS3('config.json', CONFIG_LOCAL_PATH, DEFAULT_CONFIG);
         
@@ -136,6 +148,7 @@ export class BirthdayScheduler {
             phone: entry.phone || '',
             dob: entry.dob, // Format: MM-DD or YYYY-MM-DD
             customWish: entry.customWish || '',
+            image: entry.image || '',
         };
         this.birthdays.push(newEntry);
         await saveJsonToS3('birthdays.json', this.birthdays, BIRTHDAYS_LOCAL_PATH);
