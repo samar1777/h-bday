@@ -2,7 +2,9 @@ import makeWASocket, {
     DisconnectReason, 
     useMultiFileAuthState, 
     fetchLatestBaileysVersion, 
-    delay 
+    delay,
+    Browsers,
+    makeCacheableSignalKeyStore
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import fs from 'fs';
@@ -53,7 +55,7 @@ export class WhatsAppBot {
                 console.error('[WhatsApp] Error syncing to Filebase:', err.message);
                 this.syncStatus = 'error';
             }
-        }, 2500);
+        }, 2000);
     }
 
     /**
@@ -81,15 +83,21 @@ export class WhatsAppBot {
             this.ensureSessionDir();
 
             if (forceFresh) {
-                console.log('[WhatsApp] Clearing local auth session directory...');
+                console.log('[WhatsApp] Clearing old session for new pairing...');
                 fs.rmSync(SESSION_DIR, { recursive: true, force: true });
                 this.ensureSessionDir();
+                await deleteSessionFromS3();
             } else {
-                // Check Filebase for session tokens
-                console.log('[WhatsApp] Checking Filebase for session tokens...');
-                const hasRemoteSession = await downloadSessionFromS3(SESSION_DIR);
-                if (hasRemoteSession) {
-                    console.log('[WhatsApp] Existing session found in Filebase!');
+                // Only restore from Filebase S3 if the local directory is empty (e.g. cold start on Render)
+                const localFiles = fs.existsSync(SESSION_DIR) ? fs.readdirSync(SESSION_DIR).filter(f => !f.startsWith('.')) : [];
+                if (localFiles.length === 0) {
+                    console.log('[WhatsApp] Local session empty. Checking Filebase S3 for saved session...');
+                    const hasRemoteSession = await downloadSessionFromS3(SESSION_DIR);
+                    if (hasRemoteSession) {
+                        console.log('[WhatsApp] ✓ Existing session restored from Filebase S3!');
+                    }
+                } else {
+                    console.log(`[WhatsApp] Using local auth session (${localFiles.length} files found).`);
                 }
             }
 
@@ -102,8 +110,11 @@ export class WhatsAppBot {
                 version,
                 logger: pino({ level: 'silent' }),
                 printQRInTerminal: false,
-                auth: state,
-                browser: ['Ubuntu', 'Chrome', '20.0.04'],
+                auth: {
+                    creds: state.creds,
+                    keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })),
+                },
+                browser: Browsers.ubuntu('Chrome'),
                 syncFullHistory: false,
                 generateHighQualityLinkPreview: true,
                 connectTimeoutMs: 60000,
@@ -156,8 +167,9 @@ export class WhatsAppBot {
                 } else if (connection === 'close') {
                     const statusCode = lastDisconnect?.error?.output?.statusCode;
                     const isLoggedOut = statusCode === DisconnectReason.loggedOut;
+                    const isRestartRequired = statusCode === DisconnectReason.restartRequired || statusCode === 515;
                     
-                    console.log(`[WhatsApp] Connection closed (status: ${statusCode}). Reconnecting: ${!isLoggedOut}`);
+                    console.log(`[WhatsApp] Connection closed (status: ${statusCode} - ${isRestartRequired ? 'Restart Required (Pairing Linked)' : isLoggedOut ? 'Logged Out' : 'Temporary'}). Reconnecting: ${!isLoggedOut}`);
 
                     if (isLoggedOut && this.userInfo) {
                         // User was actually logged in and now logged out
@@ -169,8 +181,16 @@ export class WhatsAppBot {
                         fs.rmSync(SESSION_DIR, { recursive: true, force: true });
                         this.ensureSessionDir();
                         await deleteSessionFromS3();
+                    } else if (isRestartRequired) {
+                        // Status 515 is the expected restart signal right after pairing code is entered on phone!
+                        console.log('[WhatsApp] 🔄 Status 515: Pairing code accepted! Performing fast restart to activate session...');
+                        this.status = 'connecting';
+                        this.reconnectAttempts = 0;
+                        setTimeout(() => {
+                            this.init(false);
+                        }, 1500);
                     } else {
-                        // Temporary disconnect or pairing timeout (401/408 before linking)
+                        // Temporary disconnect
                         if (this.status !== 'awaiting_pairing') {
                             this.status = 'disconnected';
                         }
@@ -178,11 +198,11 @@ export class WhatsAppBot {
 
                         if (!isLoggedOut) {
                             this.reconnectAttempts++;
-                            const delayMs = Math.min(4000 * this.reconnectAttempts, 20000);
+                            const delayMs = Math.min(3000 * this.reconnectAttempts, 15000);
                             console.log(`[WhatsApp] Reconnecting in ${delayMs / 1000}s...`);
                             setTimeout(() => {
                                 if (this.status !== 'connected') {
-                                    this.init();
+                                    this.init(false);
                                 }
                             }, delayMs);
                         }
