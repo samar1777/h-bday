@@ -121,6 +121,8 @@ export class WhatsAppBot {
                 defaultQueryTimeoutMs: 60000,
                 keepAliveIntervalMs: 25000,
                 markOnlineOnConnect: false,
+                getMessage: async () => undefined,
+                shouldSyncHistoryMessage: () => false,
             });
 
             // Handle credential saves & S3 sync
