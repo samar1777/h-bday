@@ -81,6 +81,36 @@ const schedEnabled = document.getElementById('sched-enabled');
 const btnSaveSettings = document.getElementById('btn-save-settings');
 const filebaseSyncText = document.getElementById('filebase-sync-text');
 
+// Activity Logs Elements
+const btnTriggerCheckNow = document.getElementById('btn-trigger-check-now');
+const btnExportLogs = document.getElementById('btn-export-logs');
+const btnClearLogs = document.getElementById('btn-clear-logs');
+const logsTodayDate = document.getElementById('logs-today-date');
+const logsLastChecked = document.getElementById('logs-last-checked');
+const logsNextRun = document.getElementById('logs-next-run');
+const toggleLiveLogs = document.getElementById('toggle-live-logs');
+const logsStreamStatus = document.getElementById('logs-stream-status');
+const logsSearchInput = document.getElementById('logs-search-input');
+const btnClearSearch = document.getElementById('btn-clear-search');
+const btnRefreshLogs = document.getElementById('btn-refresh-logs');
+const logsCountText = document.getElementById('logs-count-text');
+const toggleAutoScroll = document.getElementById('toggle-auto-scroll');
+const logsConsoleBody = document.getElementById('logs-console-body');
+const logsLivePill = document.getElementById('logs-live-pill');
+
+// Activity Logs State
+let logsState = {
+    logs: [],
+    category: 'all',
+    search: '',
+    livePolling: true,
+    autoScroll: true,
+    pollInterval: null,
+    lastCheckedDate: '',
+    timezone: 'Asia/Kolkata',
+    isChecking: false,
+};
+
 // ----------------------------------------------------
 // Authenticated Fetch Wrapper
 // ----------------------------------------------------
@@ -125,7 +155,7 @@ function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    
+
     let icon = 'ℹ️';
     if (type === 'success') icon = '✅';
     if (type === 'error') icon = '❌';
@@ -188,7 +218,7 @@ authForm.addEventListener('submit', async (e) => {
 btnAdminLogout.addEventListener('click', async () => {
     try {
         await authFetch('/api/auth/logout', { method: 'POST' });
-    } catch {}
+    } catch { }
     lockDashboard();
     showToast('Dashboard locked.', 'info');
 });
@@ -216,7 +246,7 @@ async function fetchStatus() {
     try {
         const res = await authFetch('/api/status');
         const data = await res.json();
-        
+
         appState.status = data.status;
         appState.userInfo = data.userInfo;
         appState.pairingCode = data.pairingCode;
@@ -265,7 +295,7 @@ function renderStatusUI() {
     // Stats Bar
     statPhone.innerText = userInfo?.phone ? `+${userInfo.phone}` : 'Not Connected';
     statGroup.innerText = config?.targetGroupName || (config?.targetGroupId ? config.targetGroupId.slice(0, 15) + '...' : 'Not Selected');
-    
+
     const h = String(config?.scheduleHour ?? 0).padStart(2, '0');
     const m = String(config?.scheduleMinute ?? 0).padStart(2, '0');
     statTime.innerText = `${h}:${m} (${config?.timezone || 'IST'})`;
@@ -517,7 +547,7 @@ function renderBirthdaysTable() {
     birthdaysTbody.innerHTML = sorted.map(b => {
         const { days, isToday } = calculateDaysUntil(b.dob);
         const tagText = b.phone ? `<code>${b.phone}</code>` : '<span style="color: var(--text-dim);">-</span>';
-        
+
         let statusBadge = `<span class="countdown-badge bday-upcoming">In ${days} day${days === 1 ? '' : 's'}</span>`;
         if (isToday) {
             statusBadge = `<span class="countdown-badge bday-today">🎂 TODAY! 🎉</span>`;
@@ -659,7 +689,7 @@ imageDropzone.addEventListener('drop', (e) => {
 // Global & Modal Clipboard Paste Handler (Ctrl+V)
 window.addEventListener('paste', (e) => {
     if (!e.clipboardData || !e.clipboardData.items) return;
-    
+
     const items = e.clipboardData.items;
     for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf('image') !== -1) {
@@ -716,7 +746,7 @@ function openEditModal(id) {
     bdayDob.value = item.dob;
     bdayPhone.value = item.phone || '';
     bdayCustomWish.value = item.customWish || '';
-    
+
     if (item.image) {
         setPhotoPreview(item.image);
     } else {
@@ -743,7 +773,7 @@ document.addEventListener('keydown', (e) => {
 birthdayForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const id = editBdayId.value;
-    
+
     let finalImageUrl = bdayImageData.value;
 
     // If image data is a data URI (pasted/uploaded), upload to server
@@ -887,6 +917,319 @@ function populateSettingsUI() {
 }
 
 // ----------------------------------------------------
+// Activity Logs Controller
+// ----------------------------------------------------
+async function fetchLogs(silent = false) {
+    if (!appState.authToken) return;
+    try {
+        const params = new URLSearchParams();
+        if (logsState.category && logsState.category !== 'all') {
+            if (logsState.category === 'error') {
+                params.append('level', 'warn'); // Or error handling
+            } else {
+                params.append('category', logsState.category);
+            }
+        }
+        if (logsState.search) {
+            params.append('search', logsState.search);
+        }
+        params.append('limit', '250');
+
+        const res = await authFetch(`/api/logs?${params.toString()}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        logsState.logs = data.logs || [];
+        logsState.lastCheckedDate = data.lastCheckedDate || '';
+        logsState.timezone = data.timezone || appState.config?.timezone || 'Asia/Kolkata';
+
+        updateLogsStatusStrip();
+        renderLogsUI(logsState.logs);
+    } catch (err) {
+        if (!silent) {
+            console.error('Error fetching logs:', err);
+        }
+    }
+}
+
+function updateLogsStatusStrip() {
+    if (logsTodayDate) {
+        try {
+            const now = new Date();
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: logsState.timezone,
+                month: '2-digit',
+                day: '2-digit',
+                year: 'numeric'
+            });
+            logsTodayDate.innerText = formatter.format(now);
+        } catch {
+            logsTodayDate.innerText = new Date().toISOString().slice(0, 10);
+        }
+    }
+
+    if (logsLastChecked) {
+        logsLastChecked.innerText = logsState.lastCheckedDate ? `Today (${logsState.lastCheckedDate}) ✓` : 'Not run yet today';
+    }
+
+    if (logsNextRun) {
+        const h = String(appState.config?.scheduleHour ?? 0).padStart(2, '0');
+        const m = String(appState.config?.scheduleMinute ?? 0).padStart(2, '0');
+        const tz = appState.config?.timezone || 'Asia/Kolkata';
+        logsNextRun.innerText = `${h}:${m} (${tz})`;
+    }
+
+    if (logsCountText) {
+        logsCountText.innerText = `${logsState.logs.length} entries`;
+    }
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function renderLogsUI(logs) {
+    if (!logsConsoleBody) return;
+
+    if (!logs || logs.length === 0) {
+        logsConsoleBody.innerHTML = `
+            <div class="logs-empty">
+                <span class="empty-icon">📜</span>
+                <p>No activity logs found matching the current filter.</p>
+                <button class="btn btn-sm btn-ghost" onclick="resetLogFilters()">Reset Filters</button>
+            </div>
+        `;
+        return;
+    }
+
+    const rowsHtml = logs.map(log => {
+        const levelClass = `level-${log.level || 'info'}`;
+        const tagClass = `log-tag-${log.category || 'system'}`;
+        const categoryLabel = (log.category || 'system').toUpperCase();
+        const safeMsg = escapeHtml(log.message || '');
+
+        return `
+            <div class="log-row ${levelClass}">
+                <span class="log-time">[${escapeHtml(log.timeStr || '--:--:--')}]</span>
+                <span class="log-tag ${tagClass}">${categoryLabel}</span>
+                <span class="log-msg">${safeMsg}</span>
+            </div>
+        `;
+    }).join('');
+
+    // Save previous scroll position
+    const isAtBottom = logsConsoleBody.scrollHeight - logsConsoleBody.scrollTop <= logsConsoleBody.clientHeight + 60;
+
+    logsConsoleBody.innerHTML = rowsHtml;
+
+    // Auto-scroll to top (since newest is on top) or follow scroll
+    if (logsState.autoScroll && isAtBottom) {
+        logsConsoleBody.scrollTop = 0;
+    }
+}
+
+function resetLogFilters() {
+    logsState.category = 'all';
+    logsState.search = '';
+    if (logsSearchInput) logsSearchInput.value = '';
+    if (btnClearSearch) btnClearSearch.classList.add('hidden');
+
+    document.querySelectorAll('.logs-category-pills .pill-btn').forEach(btn => {
+        if (btn.getAttribute('data-category') === 'all') {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    fetchLogs();
+}
+
+function startLogsPolling() {
+    if (logsState.pollInterval) clearInterval(logsState.pollInterval);
+    logsState.pollInterval = setInterval(() => {
+        if (logsState.livePolling && appState.authToken) {
+            fetchLogs(true);
+        }
+    }, 3000);
+}
+
+function stopLogsPolling() {
+    if (logsState.pollInterval) {
+        clearInterval(logsState.pollInterval);
+        logsState.pollInterval = null;
+    }
+}
+
+function setupLogsEvents() {
+    // 1. Category Pill Filter Click
+    document.querySelectorAll('.logs-category-pills .pill-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.logs-category-pills .pill-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            logsState.category = btn.getAttribute('data-category') || 'all';
+            fetchLogs();
+        });
+    });
+
+    // 2. Search Input with Debounce
+    let searchDebounce = null;
+    if (logsSearchInput) {
+        logsSearchInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            if (val) {
+                if (btnClearSearch) btnClearSearch.classList.remove('hidden');
+            } else {
+                if (btnClearSearch) btnClearSearch.classList.add('hidden');
+            }
+
+            if (searchDebounce) clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(() => {
+                logsState.search = val;
+                fetchLogs();
+            }, 300);
+        });
+    }
+
+    if (btnClearSearch) {
+        btnClearSearch.addEventListener('click', () => {
+            if (logsSearchInput) logsSearchInput.value = '';
+            btnClearSearch.classList.add('hidden');
+            logsState.search = '';
+            fetchLogs();
+        });
+    }
+
+    // 3. Live Stream Toggle
+    if (toggleLiveLogs) {
+        toggleLiveLogs.addEventListener('change', (e) => {
+            logsState.livePolling = e.target.checked;
+            if (logsStreamStatus) {
+                logsStreamStatus.innerHTML = logsState.livePolling ? 'Active 🟢' : 'Paused ⏸️';
+                logsStreamStatus.className = logsState.livePolling ? 'status-val text-success' : 'status-val text-muted';
+            }
+            if (logsLivePill) {
+                logsLivePill.style.display = logsState.livePolling ? 'inline-block' : 'none';
+            }
+            if (logsState.livePolling) {
+                fetchLogs();
+                startLogsPolling();
+            } else {
+                stopLogsPolling();
+            }
+        });
+    }
+
+    // 4. Auto Scroll Checkbox
+    if (toggleAutoScroll) {
+        toggleAutoScroll.addEventListener('change', (e) => {
+            logsState.autoScroll = e.target.checked;
+        });
+    }
+
+    // 5. Refresh Button
+    if (btnRefreshLogs) {
+        btnRefreshLogs.addEventListener('click', () => {
+            btnRefreshLogs.style.transform = 'rotate(180deg)';
+            btnRefreshLogs.style.transition = 'transform 0.3s';
+            fetchLogs().finally(() => {
+                setTimeout(() => {
+                    btnRefreshLogs.style.transform = 'none';
+                }, 300);
+            });
+        });
+    }
+
+    // 6. Trigger Birthday Check Now Button
+    if (btnTriggerCheckNow) {
+        btnTriggerCheckNow.addEventListener('click', async () => {
+            if (logsState.isChecking) return;
+            logsState.isChecking = true;
+            btnTriggerCheckNow.disabled = true;
+            btnTriggerCheckNow.innerHTML = '<span class="btn-spinner"></span> Checking...';
+
+            try {
+                showToast('🔍 Checking today\'s birthdays...', 'info');
+                const res = await authFetch('/api/check-today', { method: 'POST' });
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.error || 'Failed to check birthdays');
+
+                if (data.count > 0) {
+                    showToast(`🎉 Found and sent ${data.count} birthday greeting(s)!`, 'success');
+                } else if (data.reason === 'Target group not set') {
+                    showToast('⚠️ Target group is not configured in settings!', 'error');
+                } else {
+                    showToast('ℹ️ Check complete. No birthdays found for today.', 'info');
+                }
+
+                // Immediately refresh logs
+                await fetchLogs();
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                logsState.isChecking = false;
+                btnTriggerCheckNow.disabled = false;
+                btnTriggerCheckNow.innerHTML = '⚡ Check Birthdays Now';
+            }
+        });
+    }
+
+    // 7. Clear Logs Button
+    if (btnClearLogs) {
+        btnClearLogs.addEventListener('click', async () => {
+            if (!confirm('Are you sure you want to clear the activity logs history?')) return;
+            try {
+                const res = await authFetch('/api/logs/clear', { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                showToast('Activity logs cleared.', 'info');
+                await fetchLogs();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        });
+    }
+
+    // 8. Export Logs Button (.txt file download)
+    if (btnExportLogs) {
+        btnExportLogs.addEventListener('click', () => {
+            if (logsState.logs.length === 0) {
+                showToast('No logs to export.', 'info');
+                return;
+            }
+
+            const header = `====================================================\n  WhatsApp Birthday Bot - Activity Logs Export\n  Generated: ${new Date().toISOString()}\n====================================================\n\n`;
+            const content = logsState.logs.map(l => `[${l.timestamp}] [${l.category.toUpperCase()}] [${l.level.toUpperCase()}]: ${l.message}`).join('\n');
+            const blob = new Blob([header + content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `wa-birthday-bot-logs-${new Date().toISOString().slice(0, 10)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Logs exported successfully! 📥', 'success');
+        });
+    }
+
+    // When switching tabs, if logs-tab is opened, fetch logs immediately
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.getAttribute('data-tab') === 'logs-tab') {
+                fetchLogs();
+            }
+        });
+    });
+}
+
+// ----------------------------------------------------
 // Bootstrap & Verification
 // ----------------------------------------------------
 async function initDashboard() {
@@ -894,6 +1237,9 @@ async function initDashboard() {
     populateSettingsUI();
     await loadBirthdays();
     await loadGroups();
+    setupLogsEvents();
+    await fetchLogs();
+    startLogsPolling();
 }
 
 async function verifyAuthAndStart() {
@@ -924,5 +1270,7 @@ window.openEditModal = openEditModal;
 window.deleteBirthday = deleteBirthday;
 window.triggerSingleTest = triggerSingleTest;
 window.openPhotoLightbox = openPhotoLightbox;
+window.resetLogFilters = resetLogFilters;
 
 window.addEventListener('DOMContentLoaded', verifyAuthAndStart);
+

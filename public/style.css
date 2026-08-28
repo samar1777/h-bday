@@ -1149,3 +1149,407 @@ code {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
 }
 
+/* ---------------- Activity Logs Screen Styles ---------------- */
+.logs-live-pill {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    margin-left: 6px;
+    box-shadow: 0 0 8px #10b981;
+    animation: pulseGlow 2s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 14px #10b981; }
+}
+
+.logs-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.logs-status-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    padding: 0.85rem 1.25rem;
+    margin-bottom: 1.25rem;
+    backdrop-filter: blur(8px);
+}
+
+.logs-status-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.logs-status-item .status-label {
+    color: var(--text-muted);
+}
+
+.logs-status-item .status-val {
+    color: var(--text-main);
+}
+
+.toggle-switch-sm {
+    position: relative;
+    display: inline-block;
+    width: 32px;
+    height: 18px;
+    margin-right: 4px;
+}
+
+.toggle-switch-sm input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-switch-sm .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.15);
+    transition: 0.3s;
+}
+
+.toggle-switch-sm .slider.round {
+    border-radius: 18px;
+}
+
+.toggle-switch-sm .slider:before {
+    position: absolute;
+    content: "";
+    height: 12px;
+    width: 12px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.toggle-switch-sm input:checked + .slider {
+    background-color: var(--primary);
+}
+
+.toggle-switch-sm input:checked + .slider:before {
+    transform: translateX(14px);
+}
+
+/* Filter & Search Toolbar */
+.logs-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.logs-search-wrapper {
+    position: relative;
+    flex: 1 1 240px;
+    max-width: 380px;
+}
+
+.logs-search-wrapper .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.85rem;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.logs-search-wrapper input {
+    padding-left: 2.2rem;
+    padding-right: 2rem;
+    height: 38px;
+    font-size: 0.85rem;
+    background: rgba(15, 23, 42, 0.7);
+}
+
+.btn-clear-search {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.btn-clear-search:hover {
+    color: var(--text-main);
+}
+
+.logs-category-pills {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.pill-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pill-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-main);
+}
+
+.pill-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+}
+
+.logs-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.logs-count-badge {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ---------------- Logs Console / Terminal Window ---------------- */
+.logs-console-wrapper {
+    background: #080c14;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    height: 520px;
+}
+
+.logs-console-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 1rem;
+    background: rgba(15, 23, 42, 0.95);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.console-dots {
+    display: flex;
+    gap: 6px;
+}
+
+.console-dots .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.console-dots .dot.red { background: #ef4444; }
+.console-dots .dot.yellow { background: #f59e0b; }
+.console-dots .dot.green { background: #10b981; }
+
+.console-title {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+}
+
+.console-options {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+.auto-scroll-label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.auto-scroll-label input {
+    cursor: pointer;
+    accent-color: var(--primary);
+}
+
+.logs-console-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem 1rem;
+    font-family: 'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace;
+    font-size: 0.84rem;
+    line-height: 1.55;
+    background: #060911;
+    scroll-behavior: smooth;
+}
+
+/* Custom Scrollbar for Terminal */
+.logs-console-body::-webkit-scrollbar {
+    width: 8px;
+}
+.logs-console-body::-webkit-scrollbar-track {
+    background: #080c14;
+}
+.logs-console-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+.logs-console-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Log Rows */
+.log-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.3rem 0.4rem;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+    border-left: 2px solid transparent;
+    word-break: break-word;
+}
+
+.log-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.log-row.level-success {
+    border-left-color: #10b981;
+}
+
+.log-row.level-warn {
+    border-left-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.04);
+}
+
+.log-row.level-error {
+    border-left-color: #ef4444;
+    background: rgba(239, 68, 68, 0.06);
+}
+
+.log-time {
+    color: #64748b;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.log-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.log-tag-scheduler {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.log-tag-birthday {
+    background: rgba(236, 72, 153, 0.18);
+    color: #f472b6;
+    border: 1px solid rgba(236, 72, 153, 0.3);
+}
+
+.log-tag-whatsapp {
+    background: rgba(99, 102, 241, 0.18);
+    color: #818cf8;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.log-tag-cloud {
+    background: rgba(14, 165, 233, 0.18);
+    color: #38bdf8;
+    border: 1px solid rgba(14, 165, 233, 0.3);
+}
+
+.log-tag-auth {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.log-tag-system {
+    background: rgba(148, 163, 184, 0.15);
+    color: #cbd5e1;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.log-msg {
+    flex: 1;
+    color: #e2e8f0;
+}
+
+.log-row.level-success .log-msg {
+    color: #d1fae5;
+}
+
+.log-row.level-warn .log-msg {
+    color: #fef3c7;
+}
+
+.log-row.level-error .log-msg {
+    color: #fecaca;
+}
+
+/* Empty & Loading States */
+.logs-empty,
+.logs-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    color: var(--text-dim);
+    text-align: center;
+    gap: 0.75rem;
+}
+
+.logs-empty .empty-icon {
+    font-size: 2.5rem;
+    opacity: 0.5;
+}
+
+

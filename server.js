@@ -5,11 +5,15 @@ import fs from 'fs';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import { initLogger, getLogs, clearLogs } from './logger.js';
 import { waBot } from './whatsapp.js';
 import { scheduler } from './scheduler.js';
 import { uploadImageToS3 } from './filebase.js';
 
 dotenv.config();
+
+// Initialize in-memory activity logger immediately
+initLogger();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -281,6 +285,34 @@ app.post('/api/check-today', requireAuth, async (req, res) => {
     try {
         const checkResult = await scheduler.checkAndSendTodaysBirthdays();
         res.json(checkResult);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ----------------------------------------------------
+// Activity Logs API (Protected)
+// ----------------------------------------------------
+app.get('/api/logs', requireAuth, (req, res) => {
+    try {
+        const { category, level, search, limit } = req.query;
+        const logs = getLogs({ category, level, search, limit });
+        res.json({
+            logs,
+            totalCount: logs.length,
+            lastCheckedDate: scheduler.lastCheckedDate,
+            timezone: scheduler.config?.timezone || 'Asia/Kolkata',
+            targetGroupName: scheduler.config?.targetGroupName || '',
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/logs/clear', requireAuth, (req, res) => {
+    try {
+        clearLogs();
+        res.json({ success: true, message: 'Activity logs cleared.' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

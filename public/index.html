@@ -113,6 +113,10 @@
                 <button class="tab-btn" data-tab="settings-tab">
                     <span class="tab-icon">⚙️</span> Settings & Cloud
                 </button>
+                <button class="tab-btn" data-tab="logs-tab">
+                    <span class="tab-icon">📜</span> Activity Logs
+                    <span id="logs-live-pill" class="logs-live-pill" title="Live Logging Active"></span>
+                </button>
             </nav>
 
             <!-- Tab 1: Pairing & Connection -->
@@ -300,6 +304,101 @@
                         <p class="small-text mt-3">
                             ✅ Auth tokens and birthday records automatically sync to Filebase S3. When Render restarts or redeploys, your login state is restored automatically.
                         </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab 5: Real-time Activity Logs Screen -->
+            <section id="logs-tab" class="tab-pane">
+                <div class="pane-header flex-between">
+                    <div>
+                        <h2>📜 Live Activity & Birthday Check Logs</h2>
+                        <p>Real-time log stream showing scheduled checks, birthday wishes, WhatsApp events, and cloud backups.</p>
+                    </div>
+                    <div class="logs-header-actions">
+                        <button id="btn-trigger-check-now" class="btn btn-sm btn-primary" title="Trigger birthday check right now">
+                            ⚡ Check Birthdays Now
+                        </button>
+                        <button id="btn-export-logs" class="btn btn-sm btn-secondary" title="Download text logs">
+                            📥 Export
+                        </button>
+                        <button id="btn-clear-logs" class="btn btn-sm btn-danger" title="Clear log history">
+                            🧹 Clear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Logs Info Strip & Quick Status -->
+                <div class="logs-status-strip">
+                    <div class="logs-status-item">
+                        <span class="status-label">Today's Date:</span>
+                        <span id="logs-today-date" class="status-val font-semibold">--</span>
+                    </div>
+                    <div class="logs-status-item">
+                        <span class="status-label">Last Checked:</span>
+                        <span id="logs-last-checked" class="status-val">--</span>
+                    </div>
+                    <div class="logs-status-item">
+                        <span class="status-label">Next Scheduled Run:</span>
+                        <span id="logs-next-run" class="status-val text-accent">00:00 (Midnight)</span>
+                    </div>
+                    <div class="logs-status-item">
+                        <span class="status-label">Live Stream:</span>
+                        <label class="toggle-switch-sm">
+                            <input type="checkbox" id="toggle-live-logs" checked>
+                            <span class="slider round"></span>
+                        </label>
+                        <span id="logs-stream-status" class="status-val text-success">Active 🟢</span>
+                    </div>
+                </div>
+
+                <!-- Filter & Search Toolbar -->
+                <div class="logs-toolbar">
+                    <div class="logs-search-wrapper">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="logs-search-input" class="form-control" placeholder="Search logs (e.g. birthday, check, error, send)...">
+                        <button id="btn-clear-search" class="btn-clear-search hidden">&times;</button>
+                    </div>
+
+                    <div class="logs-category-pills">
+                        <button class="pill-btn active" data-category="all">All</button>
+                        <button class="pill-btn" data-category="scheduler">⏰ Scheduler</button>
+                        <button class="pill-btn" data-category="birthday">🎂 Birthdays</button>
+                        <button class="pill-btn" data-category="whatsapp">📱 WhatsApp</button>
+                        <button class="pill-btn" data-category="cloud">☁️ Cloud S3</button>
+                        <button class="pill-btn" data-category="error">⚠️ Errors/Warns</button>
+                    </div>
+
+                    <div class="logs-toolbar-right">
+                        <button id="btn-refresh-logs" class="btn btn-sm btn-ghost" title="Refresh logs">
+                            🔄 Refresh
+                        </button>
+                        <span id="logs-count-text" class="logs-count-badge">0 entries</span>
+                    </div>
+                </div>
+
+                <!-- Logs Terminal Console -->
+                <div class="logs-console-wrapper">
+                    <div class="logs-console-header">
+                        <div class="console-dots">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                        </div>
+                        <span class="console-title">🖥️ Birthday Bot Live Activity Console</span>
+                        <div class="console-options">
+                            <label class="auto-scroll-label">
+                                <input type="checkbox" id="toggle-auto-scroll" checked> Auto-scroll
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="logs-console-body" class="logs-console-body">
+                        <!-- Dynamic Log Items Rendered Here -->
+                        <div class="logs-loading">
+                            <span class="btn-spinner"></span>
+                            <p>Loading activity logs...</p>
+                        </div>
                     </div>
                 </div>
             </section>
