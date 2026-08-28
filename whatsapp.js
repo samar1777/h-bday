@@ -55,7 +55,7 @@ export class WhatsAppBot {
                 console.error('[WhatsApp] Error syncing to Filebase:', err.message);
                 this.syncStatus = 'error';
             }
-        }, 2000);
+        }, 5000);
     }
 
     /**

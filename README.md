@@ -8,7 +8,7 @@ A 24/7 cloud-ready WhatsApp automation bot built with **Baileys (Multi-Device pr
 
 - **📱 Pairing Code Login**: Log in by entering your WhatsApp phone number and typing the 8-character pairing code into WhatsApp on your phone. No QR camera scanning required!
 - **👥 WhatsApp Group Messaging**: Send automated birthday greetings directly into your chosen WhatsApp group with @mentions and personalized messages.
-- **☁️ Filebase S3 Session Persistence**: All session keys and birthday data are synchronized to your Filebase S3 bucket (`sessiontoken`). Restarts, redeployments, or sleeping instances on Render will **never** lose your WhatsApp login!
+- **☁️ Filebase S3 Session Persistence**: All session keys and birthday data are synchronized to your Filebase S3 bucket (`session1`). Restarts, redeployments, or sleeping instances on Render will **never** lose your WhatsApp login!
 - **⏰ Automated Midnight Scheduler**: Checks birthdays every day at midnight (or your custom hour/timezone) using `node-cron` and sends greetings automatically.
 - **💻 Modern Web Dashboard**: Live web interface to manage birthdays, select groups, test send messages, and monitor connection status.
 - **🚀 1-Click Render Deployment**: Includes `render.yaml`, `Dockerfile`, and health check `/health` endpoints.

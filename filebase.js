@@ -7,9 +7,12 @@ import {
 } from '@aws-sdk/client-s3';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
+let lastUploadedBundleHash = '';
 
 const FILEBASE_ENDPOINT = process.env.FILEBASE_ENDPOINT || 'https://s3.filebase.io';
 const FILEBASE_KEY = process.env.FILEBASE_KEY || '932005A6899C53076C06';
@@ -162,6 +165,13 @@ export async function uploadAllSessionFilesToS3(localDir) {
         }
 
         const bundlePayload = JSON.stringify(bundle);
+        const currentHash = crypto.createHash('md5').update(bundlePayload).digest('hex');
+
+        // If nothing changed in auth keys, skip upload to preserve 100% of Class A operations
+        if (currentHash === lastUploadedBundleHash) {
+            return;
+        }
+
         const putCommand = new PutObjectCommand({
             Bucket: FILEBASE_BUCKET,
             Key: BUNDLE_KEY,
@@ -170,6 +180,7 @@ export async function uploadAllSessionFilesToS3(localDir) {
         });
 
         await s3Client.send(putCommand);
+        lastUploadedBundleHash = currentHash;
         console.log(`[Filebase] ✓ Session bundle synchronized to S3 (1 bundle containing ${files.length} auth keys, ${(bundlePayload.length / 1024).toFixed(1)} KB).`);
     } catch (error) {
         if (error.message?.includes('Free-tier quota exceeded')) {

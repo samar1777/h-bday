@@ -105,10 +105,25 @@ export class BirthdayScheduler {
     async checkAndSendTodaysBirthdays() {
         const timezone = this.config.timezone || 'Asia/Kolkata';
         const today = this.getTodayFormatted(timezone);
-        console.log(`[Scheduler] 🔍 Checking birthdays for date: ${today} (Timezone: ${timezone})...`);
+        const now = new Date();
+        let timeFormatted = '';
+        try {
+            timeFormatted = now.toLocaleTimeString('en-US', { timeZone: timezone, hour12: false });
+        } catch {
+            timeFormatted = now.toTimeString().slice(0, 8);
+        }
+
+        console.log('====================================================');
+        console.log(`⏰ [Scheduler] DAILY BIRTHDAY CHECK TRIGGERED`);
+        console.log(`   • Date: ${today} (${now.toISOString().slice(0, 10)})`);
+        console.log(`   • Time: ${timeFormatted} (Timezone: ${timezone})`);
+        console.log(`   • Total Birthdays in Database: ${this.birthdays.length}`);
+        console.log(`   • Target WhatsApp Group: "${this.config.targetGroupName || this.config.targetGroupId || 'Not Configured'}"`);
+        console.log('----------------------------------------------------');
 
         if (!this.config.targetGroupId) {
-            console.warn('[Scheduler] ⚠️ No target WhatsApp group configured! Skipping birthday message sending. Please select a group in dashboard.');
+            console.warn('[Scheduler] ⚠️ No target WhatsApp group configured! Skipping birthday message dispatch. Please select a group in dashboard.');
+            console.log('====================================================');
             return { success: false, reason: 'Target group not set' };
         }
 
@@ -118,32 +133,47 @@ export class BirthdayScheduler {
         });
 
         if (matches.length === 0) {
-            console.log(`[Scheduler] ℹ️ Birthday check complete. No birthdays found for today (${today}). (${this.birthdays.length} total entries checked)`);
+            console.log(`ℹ️ [Scheduler] No birthdays found for today (${today}). (${this.birthdays.length} entries scanned)`);
+            const h = String(this.config.scheduleHour ?? 0).padStart(2, '0');
+            const m = String(this.config.scheduleMinute ?? 0).padStart(2, '0');
+            console.log(`   Next scheduled check: Tomorrow at ${h}:${m} (${timezone}).`);
+            console.log('====================================================');
+            this.lastCheckedDate = today;
             return { success: true, count: 0, matches: [] };
         }
 
-        const celebrantNames = matches.map(m => m.name).join(', ');
-        console.log(`[Scheduler] 🎉 Found ${matches.length} birthday(s) today (${today}): ${celebrantNames}!`);
+        console.log(`🎉 [Scheduler] FOUND ${matches.length} CELEBRANT(S) TODAY (${today})!`);
+        matches.forEach((m, idx) => {
+            console.log(`   [${idx + 1}/${matches.length}] 🎂 ${m.name} | Phone: ${m.phone || 'None'} | Photo: ${m.image ? 'Yes 📸' : 'No'}`);
+        });
+        console.log('----------------------------------------------------');
+
         const results = [];
 
-        for (const person of matches) {
+        for (let i = 0; i < matches.length; i++) {
+            const person = matches[i];
             try {
                 const hasPhoto = Boolean(person.image);
-                console.log(`[Scheduler] 🚀 Sending birthday greeting for "${person.name}" ${hasPhoto ? 'with celebrant photo 📸' : 'text-only'} to group: "${this.config.targetGroupName || this.config.targetGroupId}"...`);
+                console.log(`🚀 [Scheduler] [${i + 1}/${matches.length}] Dispatching birthday greeting for "${person.name}" ${hasPhoto ? 'with photo 📸' : '(text-only)'}...`);
                 
                 const res = await waBot.sendBirthdayWishToGroup(this.config.targetGroupId, person);
-                console.log(`[Scheduler] ✓ Birthday wish successfully delivered for ${person.name}!`);
+                console.log(`✓ [Scheduler] Successfully delivered birthday wish for "${person.name}" to group "${this.config.targetGroupName || this.config.targetGroupId}"!`);
                 results.push({ name: person.name, success: true, res });
                 
                 // 3-second delay between multiple messages in group
-                if (matches.length > 1) {
+                if (i < matches.length - 1) {
+                    console.log('[Scheduler] Pausing 3 seconds before sending next greeting...');
                     await new Promise((r) => setTimeout(r, 3000));
                 }
             } catch (err) {
-                console.error(`[Scheduler] ⚠️ Failed to send birthday wish for ${person.name}:`, err.message);
+                console.error(`❌ [Scheduler] Failed to send birthday wish for "${person.name}":`, err.message);
                 results.push({ name: person.name, success: false, error: err.message });
             }
         }
+
+        console.log('====================================================');
+        console.log(`✓ [Scheduler] Daily birthday check completed. (${results.filter(r => r.success).length}/${matches.length} delivered successfully)`);
+        console.log('====================================================');
 
         this.lastCheckedDate = today;
         return { success: true, count: matches.length, results };

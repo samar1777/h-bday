@@ -12,11 +12,11 @@ services:
       - key: ADMIN_PASSWORD
         generateValue: true
       - key: FILEBASE_KEY
-        value: 932005A6899C53076C06
+        value: 6014403412011DDBA685
       - key: FILEBASE_SECRET
-        value: D8qzIFd65tWLVn8F9M8gXWMqQYrjtUc4ff80FOsh
+        value: 7EcuQ8Ffwqbg4Ge69gE6AywuwwtoIXP0H9U7mCP0
       - key: FILEBASE_BUCKET
-        value: sessiontoken
+        value: session1
       - key: FILEBASE_ENDPOINT
         value: https://s3.filebase.io
       - key: FILEBASE_REGION
