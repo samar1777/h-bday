@@ -101,6 +101,7 @@ const logsLivePill = document.getElementById('logs-live-pill');
 // Activity Logs State
 let logsState = {
     logs: [],
+    lastRenderedFingerprint: '',
     category: 'all',
     search: '',
     livePolling: true,
@@ -997,6 +998,7 @@ function renderLogsUI(logs) {
     if (!logsConsoleBody) return;
 
     if (!logs || logs.length === 0) {
+        logsState.lastRenderedFingerprint = 'empty';
         logsConsoleBody.innerHTML = `
             <div class="logs-empty">
                 <span class="empty-icon">📜</span>
@@ -1007,7 +1009,23 @@ function renderLogsUI(logs) {
         return;
     }
 
-    const rowsHtml = logs.map(log => {
+    // Chronological order: oldest at top, newest at bottom (standard terminal stream)
+    const chronologicalLogs = [...logs].reverse();
+    const currentFingerprint = chronologicalLogs.map(l => `${l.id}-${l.level}`).join(',');
+
+    // If logs haven't changed, DO NOT touch the DOM to prevent any scroll displacement
+    if (currentFingerprint === logsState.lastRenderedFingerprint) {
+        return;
+    }
+    logsState.lastRenderedFingerprint = currentFingerprint;
+
+    // Check if user was pinned near the bottom before DOM update
+    const threshold = 60;
+    const isAtBottom = (logsConsoleBody.scrollHeight - logsConsoleBody.scrollTop - logsConsoleBody.clientHeight) <= threshold;
+    const previousScrollTop = logsConsoleBody.scrollTop;
+    const isFirstRender = logsConsoleBody.innerHTML.includes('logs-loading') || logsConsoleBody.innerHTML.includes('logs-empty');
+
+    const rowsHtml = chronologicalLogs.map(log => {
         const levelClass = `level-${log.level || 'info'}`;
         const tagClass = `log-tag-${log.category || 'system'}`;
         const categoryLabel = (log.category || 'system').toUpperCase();
@@ -1022,20 +1040,21 @@ function renderLogsUI(logs) {
         `;
     }).join('');
 
-    // Save previous scroll position
-    const isAtBottom = logsConsoleBody.scrollHeight - logsConsoleBody.scrollTop <= logsConsoleBody.clientHeight + 60;
-
     logsConsoleBody.innerHTML = rowsHtml;
 
-    // Auto-scroll to top (since newest is on top) or follow scroll
-    if (logsState.autoScroll && isAtBottom) {
-        logsConsoleBody.scrollTop = 0;
+    // Smart Scroll: If autoScroll is enabled and user is at bottom (or initial load), stay pinned to bottom.
+    // If the user scrolled up to read history, preserve their exact scroll position!
+    if (logsState.autoScroll && (isAtBottom || isFirstRender)) {
+        logsConsoleBody.scrollTop = logsConsoleBody.scrollHeight;
+    } else {
+        logsConsoleBody.scrollTop = previousScrollTop;
     }
 }
 
 function resetLogFilters() {
     logsState.category = 'all';
     logsState.search = '';
+    logsState.lastRenderedFingerprint = '';
     if (logsSearchInput) logsSearchInput.value = '';
     if (btnClearSearch) btnClearSearch.classList.add('hidden');
 
@@ -1073,6 +1092,7 @@ function setupLogsEvents() {
             document.querySelectorAll('.logs-category-pills .pill-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             logsState.category = btn.getAttribute('data-category') || 'all';
+            logsState.lastRenderedFingerprint = '';
             fetchLogs();
         });
     });
@@ -1091,6 +1111,7 @@ function setupLogsEvents() {
             if (searchDebounce) clearTimeout(searchDebounce);
             searchDebounce = setTimeout(() => {
                 logsState.search = val;
+                logsState.lastRenderedFingerprint = '';
                 fetchLogs();
             }, 300);
         });
@@ -1101,6 +1122,7 @@ function setupLogsEvents() {
             if (logsSearchInput) logsSearchInput.value = '';
             btnClearSearch.classList.add('hidden');
             logsState.search = '';
+            logsState.lastRenderedFingerprint = '';
             fetchLogs();
         });
     }
@@ -1129,6 +1151,9 @@ function setupLogsEvents() {
     if (toggleAutoScroll) {
         toggleAutoScroll.addEventListener('change', (e) => {
             logsState.autoScroll = e.target.checked;
+            if (logsState.autoScroll) {
+                logsConsoleBody.scrollTop = logsConsoleBody.scrollHeight;
+            }
         });
     }
 
