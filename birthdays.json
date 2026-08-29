@@ -1,153 +1,18 @@
 [
   {
     "id": "1",
-    "name": "ASHOK SIR",
-    "phone": "+919718237071",
-    "dob": "07-05",
-    "customWish": "🎉🎂 *Wishing a very Happy Birthday to Ashok Sir!* 🎂🎉\n\nMay this special day bring you immense joy, good health, and continued success! Thank you for your inspiring guidance and leadership. Have a wonderful year ahead! 💐🥂✨",
-    "image": "/uploads/bday_1787565556266_947c52c6.jpg"
-  },
-  {
-    "id": "2",
-    "name": "Mr. RAM",
-    "phone": "+919718237070",
-    "dob": "09-10",
-    "customWish": "🎉🎂 *Happy Birthday, Ram Ji!* 🎂🎉\n\nWishing you a fantastic year filled with happiness, great health, and prosperity! May all your goals turn into reality. Have an awesome celebration! 🥳🎈",
-    "image": "/uploads/bday_1787566187417_25c5ddf3.jpg"
-  },
-  {
-    "id": "3",
-    "name": "Mr. Sunil",
-    "phone": "+919289302943",
-    "dob": "01-15",
-    "customWish": "🎉🎂 *Happy Birthday Sunil!* 🎂🎉\n\nWishing you an amazing year ahead packed with success, happiness, and unforgettable moments! Enjoy your special day to the fullest! 🍰🥂✨",
-    "image": "/uploads/bday_1787562709457_b4c63405.jpg"
-  },
-  {
-    "id": "4",
-    "name": "Mrs. Parmila Bharti",
-    "phone": "+918076991902",
-    "dob": "01-12",
-    "customWish": "🎉🎂 *Warmest Birthday Wishes to Parmila Bharti Ji!* 🎂🎉\n\nMay your year ahead be blessed with joy, prosperity, good health, and happiness for you and your family! Have a wonderful day! 🌸✨🎈",
-    "image": "/uploads/bday_1787565296935_5689474d.jpg"
-  },
-  {
-    "id": "5",
-    "name": "Mr. Manoj Bagri",
-    "phone": "+919289302940",
-    "dob": "08-21",
-    "customWish": "🎉🎂 *Happy Birthday Manoj Ji!* 🎂🎉\n\nWishing you a fantastic day filled with laughter and cheer! May this new year bring you immense success, health, and happiness! 🥳🍻🍰",
-    "image": "/uploads/bday_1787565985787_2f2fc16f.jpg"
-  },
-  {
-    "id": "6",
-    "name": "Mr. Naveen Kohli",
-    "phone": "+919289302946",
-    "dob": "06-25",
-    "customWish": "🎉🎂 *Happy Birthday Naveen!* 🎂🎉\n\nWishing you boundless joy, peace, and great achievements this year! Keep smiling and shining bright. Have a great celebration! 🎊🎈✨",
-    "image": "/uploads/bday_1787562594355_6536f754.jpg"
-  },
-  {
-    "id": "7",
-    "name": "Mr. Ashutosh Dixit",
-    "phone": "+919818252266",
-    "dob": "07-15",
-    "customWish": "🎉🎂 *Happy Birthday Ashutosh!* 🎂🎉\n\nMay your special day be filled with positive energy and great moments! Wishing you tremendous growth, health, and happiness ahead! 🚀🥂🎂",
-    "image": "/uploads/bday_1787563379673_313ee196.jpg"
-  },
-  {
-    "id": "8",
-    "name": "Mr. Gajender",
-    "phone": "+919289302945",
-    "dob": "04-01",
-    "customWish": "🎉🎂 *Happy Birthday Gajender * 🎂🎉\n\nWishing you a delightful day and a prosperous year ahead! May you achieve all that your heart desires with good health and happiness! 🎈🥳🍰",
-    "image": "/uploads/bday_1787562232323_a8e11e7f.jpg"
-  },
-  {
-    "id": "9",
-    "name": "Mr. Nitin Sharma",
-    "phone": "+919289302948",
-    "dob": "06-22",
-    "customWish": "🎉🎂 *Happy Birthday Nitin!* 🎂🎉\n\nWishing you success in all your endeavors, everlasting happiness, and good health! Have a memorable and exciting birthday celebration! 🍻🎉✨",
-    "image": "/uploads/bday_1787562427095_b6cbfa3e.jpg"
-  },
-  {
-    "id": "10",
-    "name": "Mr. Manish",
-    "phone": "+919289302947",
-    "dob": "05-03",
-    "customWish": "🎉🎂 *Happy Birthday Manish!* 🎂🎉\n\nWishing you a cheerful day and a brilliant year ahead filled with great opportunities, fun, and success! Enjoy your day! 🥳🍰🎈",
-    "image": "/uploads/bday_1787562503310_4d7b1120.jpg"
-  },
-  {
-    "id": "11",
-    "name": "Mr. Anup Singh",
-    "phone": "+919953636881",
-    "dob": "03-28",
-    "customWish": "🎉🎂 *Happy Birthday Anup Ji!* 🎂🎉\n\nWishing you good health, prosperity, and peace of mind! May this year be exceptionally rewarding and joyful for you! 💐🥂✨",
-    "image": "/uploads/bday_1787567090292_28d125cf.jpg"
-  },
-  {
-    "id": "12",
-    "name": "Mr. Deepak",
-    "phone": "+919354826769",
-    "dob": "11-25",
-    "customWish": "🎉🎂 *Happy Birthday Deepak!* 🎂🎉\n\nWishing you an incredible day and an extraordinary year ahead! May success and happiness follow you wherever you go! 🚀🥳🎈"
-  },
-  {
-    "id": "13",
-    "name": "Mr. Anuj Rawat",
-    "phone": "+917717345696",
-    "dob": "01-01",
-    "customWish": "🎉🎂 *Happy Birthday Anuj!* 🎂🎉\n\nDouble celebration to start the year! Wishing you massive success, good fortune, and endless happiness in this new year of your life! 🎊🍾✨",
-    "image": "/uploads/bday_1787562630565_eff1b49e.jpg"
-  },
-  {
-    "id": "14",
-    "name": "Mr. Rahul / Bholu",
-    "phone": "+918826663623",
-    "dob": "02-15",
-    "customWish": "🎉🎂 *Happy Birthday Rahul (Bholu)!* 🎂🎉\n\nWishing you a day full of fun, laughter, and great vibes! May all your dreams come true this year! Have a blast! 🥳🍰🎈",
-    "image": "/uploads/bday_1787565896589_0bbb2662.jpg"
-  },
-  {
-    "id": "15",
-    "name": "Mr. Santosh Kumar",
-    "phone": "+919205565323",
-    "dob": "04-02",
-    "customWish": "🎉🎂 *Happy Birthday Santosh Ji!* 🎂🎉\n\nWishing you peace, good health, and wonderful times with family and friends! May this year bring you great satisfaction and success! 💐🥂✨",
-    "image": "/uploads/bday_1787562471136_115ae800.jpg"
-  },
-  {
-    "id": "16",
-    "name": "Mr. Kapil",
-    "phone": "+918685811514",
-    "dob": "03-06",
-    "customWish": "🎉🎂 *Happy Birthday Kapil!* 🎂🎉\n\nWishing you a super energetic day and a fantastic year ahead! Keep achieving great milestones with happiness and good health! 🚀🥳🎈",
-    "image": "/uploads/bday_1787568639394_c1d1bc49.jpg"
-  },
-  {
-    "id": "17",
-    "name": "Mr. Parveen",
-    "phone": "+919416196487",
-    "dob": "08-24",
-    "customWish": "🎉🎂 *Happy Birthday Parveen!* 🎂🎉\n\nWishing you a fantastic birthday celebration! May your year be filled with exciting adventures, great learnings, and immense joy! 🍰🎉✨",
+    "name": "Sample Friend 1",
+    "phone": "+14155552671",
+    "dob": "08-22",
+    "customWish": "🎉🎂 *Wishing a very Happy Birthday to {name}!* 🎂🎉\n\nMay this special day bring you immense joy, good health, and continued success! Have a wonderful year ahead! 💐🥂✨",
     "image": ""
   },
   {
-    "id": "18",
-    "name": "Mr. Shivam Tiwari",
-    "phone": "+919818257722",
-    "dob": "07-06",
-    "customWish": "🎉🎂 *Happy Birthday Shivam!* 🎂🎉\n\nWishing you joy, positivity, and great achievements! May this year open doors to incredible opportunities and happiness for you! 🥂🎈🎊",
-    "image": "/uploads/bday_1787565806698_831f0339.jpg"
-  },
-  {
-    "id": "19",
-    "name": "Mr. Pawan",
-    "phone": "+919565906976",
-    "dob": "04-01",
-    "customWish": "🎉🎂 *Happy Birthday Pawan Ji!* 🎂🎉\n\nWishing you a joyous birthday and a year filled with prosperity, good health, and happy moments! Enjoy your special day! 🥳🍰💐",
-    "image": "/uploads/bday_1787634901652_cddbca9a.jpg"
+    "id": "2",
+    "name": "Sample Friend 2",
+    "phone": "+919876543210",
+    "dob": "09-10",
+    "customWish": "🎉🎂 *Happy Birthday, {name}!* 🎂🎉\n\nWishing you a fantastic year filled with happiness, great health, and prosperity! 🥳🎈",
+    "image": ""
   }
 ]

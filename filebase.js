@@ -15,9 +15,9 @@ dotenv.config();
 let lastUploadedBundleHash = '';
 
 const FILEBASE_ENDPOINT = process.env.FILEBASE_ENDPOINT || 'https://s3.filebase.io';
-const FILEBASE_KEY = process.env.FILEBASE_KEY || '932005A6899C53076C06';
-const FILEBASE_SECRET = process.env.FILEBASE_SECRET || 'D8qzIFd65tWLVn8F9M8gXWMqQYrjtUc4ff80FOsh';
-const FILEBASE_BUCKET = process.env.FILEBASE_BUCKET || 'sessiontoken';
+const FILEBASE_KEY = process.env.FILEBASE_KEY || '';
+const FILEBASE_SECRET = process.env.FILEBASE_SECRET || '';
+const FILEBASE_BUCKET = process.env.FILEBASE_BUCKET || 'session1';
 const FILEBASE_REGION = process.env.FILEBASE_REGION || 'us-east-1';
 
 export const s3Client = new S3Client({
