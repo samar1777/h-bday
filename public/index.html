@@ -78,8 +78,8 @@
             <div class="stat-card">
                 <div class="stat-icon">👥</div>
                 <div class="stat-info">
-                    <span class="stat-label">Target Group</span>
-                    <span id="stat-group" class="stat-value">Not Selected</span>
+                    <span class="stat-label">Available Groups</span>
+                    <span id="stat-groups-count" class="stat-value">0 Groups</span>
                 </div>
             </div>
             <div class="stat-card">
@@ -103,9 +103,6 @@
             <nav class="tabs-nav">
                 <button class="tab-btn active" data-tab="pair-tab">
                     <span class="tab-icon">🔑</span> Link WhatsApp
-                </button>
-                <button class="tab-btn" data-tab="group-tab">
-                    <span class="tab-icon">👥</span> Target Group
                 </button>
                 <button class="tab-btn" data-tab="birthdays-tab">
                     <span class="tab-icon">🎂</span> Birthday List
@@ -173,43 +170,7 @@
                 </div>
             </section>
 
-            <!-- Tab 2: Target WhatsApp Group -->
-            <section id="group-tab" class="tab-pane">
-                <div class="pane-header">
-                    <h2>Target WhatsApp Group</h2>
-                    <p>Select which WhatsApp group the bot should send automated birthday wishes to.</p>
-                </div>
-
-                <div class="group-selection-card">
-                    <div class="form-group">
-                        <div class="flex-between">
-                            <label for="group-select">Choose Group</label>
-                            <button id="btn-refresh-groups" class="btn btn-sm btn-ghost">🔄 Refresh Groups</button>
-                        </div>
-                        <select id="group-select" class="form-control">
-                            <option value="">-- Connect WhatsApp First to Load Groups --</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="manual-group-id">Or Enter Group JID Manually</label>
-                        <input type="text" id="manual-group-id" class="form-control" placeholder="e.g. 120363028372837@g.us">
-                    </div>
-
-                    <div class="form-actions">
-                        <button id="btn-save-group" class="btn btn-primary">Save Target Group</button>
-                        <button id="btn-test-group" class="btn btn-accent">🚀 Send Test Wish to Group</button>
-                    </div>
-                </div>
-
-                <div class="current-target-info">
-                    <h4>Current Group Configuration:</h4>
-                    <p><strong>Name:</strong> <span id="current-group-name">Not Selected</span></p>
-                    <p><strong>Group JID:</strong> <code id="current-group-id">None</code></p>
-                </div>
-            </section>
-
-            <!-- Tab 3: Birthday List & Manager -->
+            <!-- Tab 2: Birthday List & Manager -->
             <section id="birthdays-tab" class="tab-pane">
                 <div class="pane-header flex-between">
                     <div>
@@ -229,6 +190,7 @@
                                 <th style="width: 60px;">Photo</th>
                                 <th>Name</th>
                                 <th>Date of Birth</th>
+                                <th>Target WhatsApp Group</th>
                                 <th>WhatsApp Tag</th>
                                 <th>Status / Countdown</th>
                                 <th>Actions</th>
@@ -236,7 +198,7 @@
                         </thead>
                         <tbody id="birthdays-tbody">
                             <tr>
-                                <td colspan="6" class="text-center py-4">Loading birthdays...</td>
+                                <td colspan="7" class="text-center py-4">Loading birthdays...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -458,6 +420,21 @@
                         <input type="text" id="bday-phone" class="form-control" placeholder="e.g. +919876543210">
                         <small class="form-hint">Optional. Tags person with @ in group</small>
                     </div>
+                </div>
+
+                <!-- Target WhatsApp Group Selection -->
+                <div class="form-group">
+                    <div class="flex-between" style="margin-bottom: 6px;">
+                        <label for="bday-group-select">Target WhatsApp Group *</label>
+                        <button type="button" id="btn-refresh-modal-groups" class="btn btn-sm btn-ghost" title="Refresh WhatsApp Groups from your phone">🔄 Refresh Groups</button>
+                    </div>
+                    <select id="bday-group-select" class="form-control" required>
+                        <option value="">-- Select a WhatsApp Group --</option>
+                    </select>
+                    <div class="manual-group-wrap" style="margin-top: 6px;">
+                        <input type="text" id="bday-manual-group-id" class="form-control" placeholder="Or enter WhatsApp Group JID manually (e.g. 120363xxx@g.us)">
+                    </div>
+                    <small class="form-hint">Birthday greetings for this person will be sent exclusively to this selected group.</small>
                 </div>
 
                 <div class="form-group">

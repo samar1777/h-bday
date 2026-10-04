@@ -9,8 +9,6 @@ const CONFIG_LOCAL_PATH = path.resolve('./config.json');
 const UPLOADS_LOCAL_PATH = path.resolve('./public/uploads');
 
 const DEFAULT_CONFIG = {
-    targetGroupId: '', // e.g. "120363xxxxxx@g.us"
-    targetGroupName: '',
     timezone: 'Asia/Kolkata',
     scheduleHour: 0,
     scheduleMinute: 0,
@@ -25,6 +23,8 @@ const DEFAULT_BIRTHDAYS = [
         dob: '08-22', // MM-DD
         customWish: '🎉 Happy Birthday {name}! Wishing you all the happiness and joy in the world! 🎂🥂',
         image: '',
+        targetGroupId: '',
+        targetGroupName: '',
     }
 ];
 
@@ -51,7 +51,7 @@ export class BirthdayScheduler {
         this.config = await loadJsonFromS3('config.json', CONFIG_LOCAL_PATH, DEFAULT_CONFIG);
         
         this.setupCron();
-        console.log(`[Scheduler] Loaded ${this.birthdays.length} birthday entries. Target group: ${this.config.targetGroupName || this.config.targetGroupId || 'Not Set'}`);
+        console.log(`[Scheduler] Loaded ${this.birthdays.length} birthday entries. (Per-person target group mode active)`);
     }
 
     setupCron() {
@@ -118,14 +118,8 @@ export class BirthdayScheduler {
         console.log(`   • Date: ${today} (${now.toISOString().slice(0, 10)})`);
         console.log(`   • Time: ${timeFormatted} (Timezone: ${timezone})`);
         console.log(`   • Total Birthdays in Database: ${this.birthdays.length}`);
-        console.log(`   • Target WhatsApp Group: "${this.config.targetGroupName || this.config.targetGroupId || 'Not Configured'}"`);
+        console.log(`   • Target Mode: Individual Per-Person Specific Groups`);
         console.log('----------------------------------------------------');
-
-        if (!this.config.targetGroupId) {
-            console.warn('[Scheduler] ⚠️ No target WhatsApp group configured! Skipping birthday message dispatch. Please select a group in dashboard.');
-            console.log('====================================================');
-            return { success: false, reason: 'Target group not set' };
-        }
 
         const matches = this.birthdays.filter((b) => {
             const cleanDob = b.dob?.length > 5 ? b.dob.slice(-5) : b.dob; // Handles YYYY-MM-DD or MM-DD
@@ -144,7 +138,8 @@ export class BirthdayScheduler {
 
         console.log(`🎉 [Scheduler] FOUND ${matches.length} CELEBRANT(S) TODAY (${today})!`);
         matches.forEach((m, idx) => {
-            console.log(`   [${idx + 1}/${matches.length}] 🎂 ${m.name} | Phone: ${m.phone || 'None'} | Photo: ${m.image ? 'Yes 📸' : 'No'}`);
+            const grpDisplay = m.targetGroupName || m.targetGroupId || '⚠️ NO GROUP ASSIGNED';
+            console.log(`   [${idx + 1}/${matches.length}] 🎂 ${m.name} | Target Group: "${grpDisplay}" | Phone: ${m.phone || 'None'} | Photo: ${m.image ? 'Yes 📸' : 'No'}`);
         });
         console.log('----------------------------------------------------');
 
@@ -152,12 +147,21 @@ export class BirthdayScheduler {
 
         for (let i = 0; i < matches.length; i++) {
             const person = matches[i];
+            if (!person.targetGroupId) {
+                const warnMsg = `⚠️ No target WhatsApp group selected for "${person.name}". Skipping automated greeting. Please edit this contact in dashboard to assign a group.`;
+                console.warn(`[Scheduler] ${warnMsg}`);
+                results.push({ name: person.name, success: false, error: warnMsg, missingGroup: true });
+                continue;
+            }
+
+            const targetGroupName = person.targetGroupName || person.targetGroupId;
+
             try {
                 const hasPhoto = Boolean(person.image);
-                console.log(`🚀 [Scheduler] [${i + 1}/${matches.length}] Dispatching birthday greeting for "${person.name}" ${hasPhoto ? 'with photo 📸' : '(text-only)'}...`);
+                console.log(`🚀 [Scheduler] [${i + 1}/${matches.length}] Dispatching birthday greeting for "${person.name}" ${hasPhoto ? 'with photo 📸' : '(text-only)'} to group "${targetGroupName}"...`);
                 
-                const res = await waBot.sendBirthdayWishToGroup(this.config.targetGroupId, person);
-                console.log(`✓ [Scheduler] Successfully delivered birthday wish for "${person.name}" to group "${this.config.targetGroupName || this.config.targetGroupId}"!`);
+                const res = await waBot.sendBirthdayWishToGroup(person.targetGroupId, person);
+                console.log(`✓ [Scheduler] Successfully delivered birthday wish for "${person.name}" to group "${targetGroupName}"!`);
                 results.push({ name: person.name, success: true, res });
                 
                 // 3-second delay between multiple messages in group
@@ -187,6 +191,8 @@ export class BirthdayScheduler {
             dob: entry.dob, // Format: MM-DD or YYYY-MM-DD
             customWish: entry.customWish || '',
             image: entry.image || '',
+            targetGroupId: entry.targetGroupId || '',
+            targetGroupName: entry.targetGroupName || '',
         };
         this.birthdays.push(newEntry);
         await saveJsonToS3('birthdays.json', this.birthdays, BIRTHDAYS_LOCAL_PATH);
@@ -233,15 +239,17 @@ export class BirthdayScheduler {
                     name: 'Test Celebrant',
                     phone: '',
                     customWish: '🎉🎂 *TEST BIRTHDAY MESSAGE!* 🎂🎉\n\nTesting WhatsApp Group Birthday automation successfully! 🚀🥂',
+                    targetGroupId: '',
+                    targetGroupName: '',
                 };
             }
         }
 
-        if (!this.config.targetGroupId) {
-            throw new Error('Target group is not selected. Please choose a target WhatsApp group first.');
+        if (!person.targetGroupId) {
+            throw new Error(`Target WhatsApp group is not selected for "${person.name}". Please edit this contact and choose their target group.`);
         }
 
-        return await waBot.sendBirthdayWishToGroup(this.config.targetGroupId, person);
+        return await waBot.sendBirthdayWishToGroup(person.targetGroupId, person);
     }
 }
 

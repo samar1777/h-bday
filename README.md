@@ -56,12 +56,13 @@ A 24/7 cloud-ready WhatsApp automation bot built with **Baileys (Multi-Device pr
 
 ---
 
-## 👥 How to Configure WhatsApp Group & Birthdays
+## 👥 How to Configure WhatsApp Groups & Birthdays
 
-1. Go to the **Target Group** tab &rarr; Click **🔄 Refresh Groups** &rarr; Select your desired group from the dropdown &rarr; Click **Save Target Group**.
-2. Go to the **Birthday List** tab &rarr; Click **+ Add Birthday** &rarr; Enter name, date of birth (`MM-DD`), and optional phone number for @mention.
-3. Click **🚀 (Rocket icon)** on any birthday entry to send an instant test greeting into your WhatsApp group.
-4. Open the **📜 Activity Logs** tab anytime to watch scheduled checks and message delivery logs in real time.
+1. Go to the **Birthday List** tab &rarr; Click **+ Add Birthday**.
+2. Enter the person's name, date of birth (`MM-DD`), and optional phone number for @tagging.
+3. Select the **Target WhatsApp Group** for that specific person from the dropdown (or enter a custom group JID). The bot will send this person's wish specifically to their selected group!
+4. Click **🚀 (Rocket icon)** on any birthday entry to send an instant test greeting into that person's assigned group.
+5. Open the **📜 Activity Logs** tab anytime to watch scheduled checks and message delivery logs in real time.
 
 ---
 

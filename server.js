@@ -218,11 +218,11 @@ app.get('/api/birthdays', requireAuth, (req, res) => {
 
 app.post('/api/birthdays', requireAuth, async (req, res) => {
     try {
-        const { name, phone, dob, customWish, image } = req.body;
+        const { name, phone, dob, customWish, image, targetGroupId, targetGroupName } = req.body;
         if (!name || !dob) {
             return res.status(400).json({ error: 'Name and Date of Birth (dob) are required.' });
         }
-        const newEntry = await scheduler.addBirthday({ name, phone, dob, customWish, image });
+        const newEntry = await scheduler.addBirthday({ name, phone, dob, customWish, image, targetGroupId, targetGroupName });
         res.status(201).json({ success: true, birthday: newEntry });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -302,7 +302,6 @@ app.get('/api/logs', requireAuth, (req, res) => {
             totalCount: logs.length,
             lastCheckedDate: scheduler.lastCheckedDate,
             timezone: scheduler.config?.timezone || 'Asia/Kolkata',
-            targetGroupName: scheduler.config?.targetGroupName || '',
         });
     } catch (error) {
         res.status(500).json({ error: error.message });

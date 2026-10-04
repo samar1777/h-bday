@@ -168,8 +168,30 @@ export class WhatsAppBot {
                     this.refreshGroups().catch(() => {});
                 } else if (connection === 'close') {
                     const statusCode = lastDisconnect?.error?.output?.statusCode;
+                    const errorMessage = lastDisconnect?.error?.message || '';
+                    const isBadMAC = errorMessage.includes('Bad MAC');
                     const isLoggedOut = statusCode === DisconnectReason.loggedOut;
                     const isRestartRequired = statusCode === DisconnectReason.restartRequired || statusCode === 515;
+
+                    // Bad MAC = Signal Protocol session keys are corrupted/out of sync.
+                    // The only recovery is to wipe the session and re-pair.
+                    if (isBadMAC) {
+                        console.error('[WhatsApp] ❌ Bad MAC error: Session keys are corrupted or out of sync with WhatsApp servers.');
+                        console.log('[WhatsApp] 🧹 Clearing corrupted session (local + S3) and resetting...');
+                        this.status = 'disconnected';
+                        this.userInfo = null;
+                        this.pairingCode = null;
+
+                        try {
+                            fs.rmSync(SESSION_DIR, { recursive: true, force: true });
+                            this.ensureSessionDir();
+                            await deleteSessionFromS3();
+                        } catch (cleanupErr) {
+                            console.error('[WhatsApp] Error during Bad MAC cleanup:', cleanupErr.message);
+                        }
+                        // Don't auto-reconnect — user must re-pair via the dashboard
+                        return;
+                    }
                     
                     console.log(`[WhatsApp] Connection closed (status: ${statusCode} - ${isRestartRequired ? 'Restart Required (Pairing Linked)' : isLoggedOut ? 'Logged Out' : 'Temporary'}). Reconnecting: ${!isLoggedOut}`);
 

@@ -704,6 +704,48 @@ code {
     color: #a5b4fc;
 }
 
+.bday-group-cell {
+    max-width: 220px;
+}
+
+.group-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.28rem 0.65rem;
+    background: rgba(56, 189, 248, 0.12);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.group-badge-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.28rem 0.65rem;
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px dashed rgba(245, 158, 11, 0.5);
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.group-badge-warning:hover {
+    background: rgba(245, 158, 11, 0.28);
+    transform: translateY(-1px);
+    border-color: #fbbf24;
+}
+
 .table-actions {
     display: flex;
     gap: 0.4rem;

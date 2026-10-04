@@ -25,7 +25,7 @@ const btnAdminLogout = document.getElementById('btn-admin-logout');
 const connectionBadge = document.getElementById('connection-badge');
 const filebaseBadge = document.getElementById('filebase-badge');
 const statPhone = document.getElementById('stat-phone');
-const statGroup = document.getElementById('stat-group');
+const statGroupsCount = document.getElementById('stat-groups-count');
 const statTime = document.getElementById('stat-time');
 const statCount = document.getElementById('stat-count');
 
@@ -40,13 +40,9 @@ const codeResultContainer = document.getElementById('code-result-container');
 const pairingCodeDisplay = document.getElementById('pairing-code-display');
 const btnCopyCode = document.getElementById('btn-copy-code');
 
-const groupSelect = document.getElementById('group-select');
-const manualGroupId = document.getElementById('manual-group-id');
-const btnRefreshGroups = document.getElementById('btn-refresh-groups');
-const btnSaveGroup = document.getElementById('btn-save-group');
-const btnTestGroup = document.getElementById('btn-test-group');
-const currentGroupName = document.getElementById('current-group-name');
-const currentGroupId = document.getElementById('current-group-id');
+const bdayGroupSelect = document.getElementById('bday-group-select');
+const bdayManualGroupId = document.getElementById('bday-manual-group-id');
+const btnRefreshModalGroups = document.getElementById('btn-refresh-modal-groups');
 
 const birthdaysTbody = document.getElementById('birthdays-tbody');
 const btnOpenAddModal = document.getElementById('btn-open-add-modal');
@@ -295,7 +291,9 @@ function renderStatusUI() {
 
     // Stats Bar
     statPhone.innerText = userInfo?.phone ? `+${userInfo.phone}` : 'Not Connected';
-    statGroup.innerText = config?.targetGroupName || (config?.targetGroupId ? config.targetGroupId.slice(0, 15) + '...' : 'Not Selected');
+    if (statGroupsCount) {
+        statGroupsCount.innerText = `${appState.groups.length} Group${appState.groups.length === 1 ? '' : 's'}`;
+    }
 
     const h = String(config?.scheduleHour ?? 0).padStart(2, '0');
     const m = String(config?.scheduleMinute ?? 0).padStart(2, '0');
@@ -314,13 +312,6 @@ function renderStatusUI() {
             pairingCodeDisplay.innerText = pairingCode;
             codeResultContainer.classList.remove('hidden');
         }
-    }
-
-    // Current Target Info
-    currentGroupName.innerText = config?.targetGroupName || 'Not Selected';
-    currentGroupId.innerText = config?.targetGroupId || 'None';
-    if (config?.targetGroupId) {
-        manualGroupId.value = config.targetGroupId;
     }
 }
 
@@ -386,6 +377,9 @@ btnLogout.addEventListener('click', async () => {
 // ----------------------------------------------------
 // Groups Management
 // ----------------------------------------------------
+// ----------------------------------------------------
+// Groups Management (Per-Person Targeting)
+// ----------------------------------------------------
 async function loadGroups() {
     if (!appState.authToken) return;
     try {
@@ -393,93 +387,95 @@ async function loadGroups() {
         const data = await res.json();
         appState.groups = data.groups || [];
 
-        groupSelect.innerHTML = '<option value="">-- Select from your WhatsApp Groups --</option>';
-        if (appState.groups.length === 0) {
-            groupSelect.innerHTML = '<option value="">No groups found. Connect WhatsApp first.</option>';
-            return;
+        if (statGroupsCount) {
+            statGroupsCount.innerText = `${appState.groups.length} Group${appState.groups.length === 1 ? '' : 's'}`;
         }
 
-        appState.groups.forEach(g => {
-            const opt = document.createElement('option');
-            opt.value = g.id;
-            opt.innerText = `${g.subject} (${g.participantsCount} members)`;
-            if (appState.config?.targetGroupId === g.id) {
-                opt.selected = true;
-            }
-            groupSelect.appendChild(opt);
-        });
+        // If birthday modal is currently visible, refresh options preserving selection
+        if (birthdayModal && !birthdayModal.classList.contains('hidden')) {
+            const currentSelected = bdayManualGroupId?.value || bdayGroupSelect?.value;
+            populateModalGroupSelect(currentSelected);
+        }
     } catch (err) {
         console.error('Error loading groups:', err);
     }
 }
 
-groupSelect.addEventListener('change', () => {
-    if (groupSelect.value) {
-        manualGroupId.value = groupSelect.value;
-    }
-});
+function populateModalGroupSelect(selectedId = '', customName = '') {
+    if (!bdayGroupSelect) return;
 
-btnRefreshGroups.addEventListener('click', async () => {
-    btnRefreshGroups.innerText = 'Refreshing...';
-    await loadGroups();
-    btnRefreshGroups.innerText = '🔄 Refresh Groups';
-    showToast('Groups list refreshed!', 'success');
-});
+    bdayGroupSelect.innerHTML = '<option value="">-- Select a WhatsApp Group --</option>';
 
-btnSaveGroup.addEventListener('click', async () => {
-    const groupId = manualGroupId.value.trim() || groupSelect.value;
-    if (!groupId) {
-        showToast('Please select or enter a WhatsApp Group JID.', 'error');
-        return;
-    }
-
-    let groupName = 'Custom Group';
-    const matched = appState.groups.find(g => g.id === groupId);
-    if (matched) groupName = matched.subject;
-
-    try {
-        const res = await authFetch('/api/groups/target', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ groupId, groupName }),
+    if (!appState.groups || appState.groups.length === 0) {
+        const statusMsg = appState.status === 'connected'
+            ? 'No groups found. Tap Refresh Groups or type JID below.'
+            : '⚠️ Connect WhatsApp first to load groups.';
+        const emptyOpt = document.createElement('option');
+        emptyOpt.value = '';
+        emptyOpt.innerText = statusMsg;
+        emptyOpt.disabled = true;
+        bdayGroupSelect.appendChild(emptyOpt);
+    } else {
+        appState.groups.forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g.id;
+            opt.innerText = `👥 ${g.subject} (${g.participantsCount} members)`;
+            if (selectedId && g.id === selectedId) {
+                opt.selected = true;
+            }
+            bdayGroupSelect.appendChild(opt);
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-
-        appState.config = data.config;
-        renderStatusUI();
-        showToast(`Target group saved: ${groupName}`, 'success');
-    } catch (err) {
-        showToast(err.message, 'error');
-    }
-});
-
-btnTestGroup.addEventListener('click', async () => {
-    if (!appState.config?.targetGroupId && !manualGroupId.value.trim()) {
-        showToast('Save a target group first before testing!', 'error');
-        return;
     }
 
-    btnTestGroup.disabled = true;
-    btnTestGroup.innerText = 'Sending...';
-
-    try {
-        const res = await authFetch('/api/test-send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({}),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-
-        showToast('🚀 Test message sent into the WhatsApp group!', 'success');
-    } catch (err) {
-        showToast(`Failed: ${err.message}`, 'error');
-    } finally {
-        btnTestGroup.disabled = false;
-        btnTestGroup.innerText = '🚀 Send Test Wish to Group';
+    // If an existing contact has a saved group JID not in Baileys active cache
+    if (selectedId && !appState.groups.some(g => g.id === selectedId)) {
+        const customOpt = document.createElement('option');
+        customOpt.value = selectedId;
+        customOpt.innerText = `👥 ${customName || selectedId} (Saved Group)`;
+        customOpt.selected = true;
+        bdayGroupSelect.appendChild(customOpt);
     }
-});
+
+    bdayGroupSelect.value = selectedId || '';
+    if (bdayManualGroupId) {
+        bdayManualGroupId.value = selectedId || '';
+    }
+}
+
+if (bdayGroupSelect) {
+    bdayGroupSelect.addEventListener('change', () => {
+        if (bdayGroupSelect.value && bdayManualGroupId) {
+            bdayManualGroupId.value = bdayGroupSelect.value;
+        }
+    });
+}
+
+if (bdayManualGroupId) {
+    bdayManualGroupId.addEventListener('input', () => {
+        const val = bdayManualGroupId.value.trim();
+        if (val && bdayGroupSelect) {
+            bdayGroupSelect.value = val;
+        }
+    });
+}
+
+if (btnRefreshModalGroups) {
+    btnRefreshModalGroups.addEventListener('click', async () => {
+        btnRefreshModalGroups.innerText = 'Refreshing...';
+        btnRefreshModalGroups.disabled = true;
+        try {
+            await loadGroups();
+            const currentSelected = bdayManualGroupId?.value || bdayGroupSelect?.value;
+            populateModalGroupSelect(currentSelected);
+            showToast(`Loaded ${appState.groups.length} WhatsApp groups!`, 'success');
+        } catch (err) {
+            showToast('Failed to refresh groups: ' + err.message, 'error');
+        } finally {
+            btnRefreshModalGroups.innerText = '🔄 Refresh Groups';
+            btnRefreshModalGroups.disabled = false;
+        }
+    });
+}
 
 // ----------------------------------------------------
 // Birthdays Database & Table
@@ -533,7 +529,7 @@ function renderBirthdaysTable() {
     if (appState.birthdays.length === 0) {
         birthdaysTbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center py-4" style="color: var(--text-dim);">
+                <td colspan="7" class="text-center py-4" style="color: var(--text-dim);">
                     No birthdays added yet. Click <strong>+ Add Birthday</strong> to get started!
                 </td>
             </tr>
@@ -563,16 +559,26 @@ function renderBirthdaysTable() {
             <div class="avatar-placeholder" title="No photo attached">${getInitials(b.name)}</div>
         `;
 
+        // Target WhatsApp Group Badge
+        let groupBadgeHtml = '';
+        if (b.targetGroupId) {
+            const matchedName = b.targetGroupName || (appState.groups.find(g => g.id === b.targetGroupId)?.subject) || b.targetGroupId;
+            groupBadgeHtml = `<span class="group-badge" title="Target Group: ${escapeHtml(matchedName)} (${escapeHtml(b.targetGroupId)})">👥 ${escapeHtml(matchedName)}</span>`;
+        } else {
+            groupBadgeHtml = `<span class="group-badge-warning" onclick="openEditModal('${b.id}')" title="Click to select a target WhatsApp group for this person">⚠️ No Group Selected</span>`;
+        }
+
         return `
             <tr>
                 <td class="bday-photo-cell">${photoHtml}</td>
                 <td class="bday-name-cell">${escapeHtml(b.name)}</td>
                 <td><strong>${escapeHtml(b.dob)}</strong></td>
+                <td class="bday-group-cell">${groupBadgeHtml}</td>
                 <td>${tagText}</td>
                 <td>${statusBadge}</td>
                 <td>
                     <div class="table-actions">
-                        <button class="btn btn-sm btn-ghost" onclick="triggerSingleTest('${b.id}')" title="Send Wish with Photo">🚀</button>
+                        <button class="btn btn-sm btn-ghost" onclick="triggerSingleTest('${b.id}')" title="Send Wish to Assigned Group">🚀</button>
                         <button class="btn btn-sm btn-ghost" onclick="openEditModal('${b.id}')" title="Edit">✏️</button>
                         <button class="btn btn-sm btn-ghost" onclick="deleteBirthday('${b.id}')" title="Delete" style="color: var(--danger);">🗑️</button>
                     </div>
@@ -734,6 +740,7 @@ btnOpenAddModal.addEventListener('click', () => {
     editBdayId.value = '';
     clearPhoto();
     birthdayForm.reset();
+    populateModalGroupSelect('', '');
     birthdayModal.classList.remove('hidden');
 });
 
@@ -747,6 +754,9 @@ function openEditModal(id) {
     bdayDob.value = item.dob;
     bdayPhone.value = item.phone || '';
     bdayCustomWish.value = item.customWish || '';
+
+    // If contact does not have a group yet (existing data), leaves select empty for manual selection
+    populateModalGroupSelect(item.targetGroupId || '', item.targetGroupName || '');
 
     if (item.image) {
         setPhotoPreview(item.image);
@@ -775,6 +785,23 @@ birthdayForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const id = editBdayId.value;
 
+    const targetGroupId = (bdayManualGroupId?.value.trim() || bdayGroupSelect?.value.trim()) || '';
+    if (!targetGroupId) {
+        showToast('Please select or enter a target WhatsApp group for this person.', 'error');
+        if (bdayGroupSelect) bdayGroupSelect.focus();
+        return;
+    }
+
+    let targetGroupName = '';
+    const matchedGroup = appState.groups.find(g => g.id === targetGroupId);
+    if (matchedGroup) {
+        targetGroupName = matchedGroup.subject;
+    } else if (bdayGroupSelect && bdayGroupSelect.selectedOptions && bdayGroupSelect.selectedOptions[0] && bdayGroupSelect.value === targetGroupId) {
+        targetGroupName = bdayGroupSelect.selectedOptions[0].text.replace(/^👥\s*/, '').replace(/\s*\(\d+\s*members\)$/, '');
+    } else {
+        targetGroupName = targetGroupId;
+    }
+
     let finalImageUrl = bdayImageData.value;
 
     // If image data is a data URI (pasted/uploaded), upload to server
@@ -801,6 +828,8 @@ birthdayForm.addEventListener('submit', async (e) => {
         phone: bdayPhone.value.trim(),
         customWish: bdayCustomWish.value.trim(),
         image: finalImageUrl || '',
+        targetGroupId,
+        targetGroupName,
     };
 
     try {
@@ -824,7 +853,7 @@ birthdayForm.addEventListener('submit', async (e) => {
 
         closeModal();
         await loadBirthdays();
-        showToast(id ? 'Birthday updated with photo! 🎉' : 'Birthday added with photo! 🎉', 'success');
+        showToast(id ? 'Birthday updated with assigned group! 🎉' : 'Birthday added with assigned group! 🎉', 'success');
     } catch (err) {
         showToast(err.message, 'error');
     }
@@ -845,8 +874,16 @@ async function deleteBirthday(id) {
 }
 
 async function triggerSingleTest(id) {
+    const person = appState.birthdays.find(b => b.id === id);
+    if (person && !person.targetGroupId) {
+        showToast(`⚠️ No group selected for "${person.name}". Please edit and assign a group first!`, 'error');
+        openEditModal(id);
+        return;
+    }
+
+    const groupName = person?.targetGroupName || person?.targetGroupId || 'assigned group';
     try {
-        showToast('Sending wish into target group...', 'info');
+        showToast(`Sending wish for "${person?.name || 'celebrant'}" to group "${groupName}"...`, 'info');
         const res = await authFetch('/api/test-send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -855,7 +892,7 @@ async function triggerSingleTest(id) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
 
-        showToast('Birthday greeting posted in WhatsApp Group!', 'success');
+        showToast(`Birthday wish posted into "${groupName}"! 🎉`, 'success');
     } catch (err) {
         showToast(`Error: ${err.message}`, 'error');
     }
@@ -869,7 +906,14 @@ btnCheckToday.addEventListener('click', async () => {
         if (!res.ok) throw new Error(data.error);
 
         if (data.count > 0) {
-            showToast(`🎉 Sent wishes for ${data.count} birthday(s) today!`, 'success');
+            const missing = (data.results || []).filter(r => r.missingGroup);
+            const sent = (data.results || []).filter(r => r.success);
+            if (missing.length > 0) {
+                showToast(`⚠️ ${missing.length} celebrant(s) skipped: No group selected! Please edit to assign a group.`, 'error');
+            }
+            if (sent.length > 0) {
+                showToast(`🎉 Sent wishes for ${sent.length} celebrant(s) to their assigned groups!`, 'success');
+            }
         } else {
             showToast('No birthdays matching today\'s date.', 'info');
         }
@@ -1186,9 +1230,14 @@ function setupLogsEvents() {
                 if (!res.ok) throw new Error(data.error || 'Failed to check birthdays');
 
                 if (data.count > 0) {
-                    showToast(`🎉 Found and sent ${data.count} birthday greeting(s)!`, 'success');
-                } else if (data.reason === 'Target group not set') {
-                    showToast('⚠️ Target group is not configured in settings!', 'error');
+                    const missing = (data.results || []).filter(r => r.missingGroup);
+                    const sent = (data.results || []).filter(r => r.success);
+                    if (missing.length > 0) {
+                        showToast(`⚠️ ${missing.length} celebrant(s) skipped: No group selected!`, 'error');
+                    }
+                    if (sent.length > 0) {
+                        showToast(`🎉 Sent ${sent.length} greeting(s) into their assigned groups!`, 'success');
+                    }
                 } else {
                     showToast('ℹ️ Check complete. No birthdays found for today.', 'info');
                 }
